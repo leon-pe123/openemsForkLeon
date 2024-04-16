@@ -217,6 +217,7 @@ public class EvcsKebaKeContactImpl extends AbstractManagedEvcsComponent
 		if (current < 6000) {
 			current = 0;
 		}
+		log.debug("ÜbergabeLeistung: " + current + "mA");
 		return this.send("currtime " + current + " 1");
 	}
 
