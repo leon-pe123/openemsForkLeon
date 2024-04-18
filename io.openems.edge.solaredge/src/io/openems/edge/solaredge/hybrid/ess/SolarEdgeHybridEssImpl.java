@@ -193,7 +193,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 
 		// If the difference between actual PowerWanted and the moving average over the
 		// last 5 values is to high - don´t apply ChargePower directly
-		if (Math.abs(activePowerWantedAverageCalculator.getAverage() - activePowerWanted) > 100) {
+		if (Math.abs(activePowerWantedAverageCalculator.getAverage() - activePowerWanted) > 500) {
 			errorOnAverage = "| Error On Average: Wanted " + activePowerWanted + "/Avg: "
 					+ activePowerWantedAverageCalculator.getAverage();
 			activePowerWanted = activePowerWantedAverageCalculator.getAverage();

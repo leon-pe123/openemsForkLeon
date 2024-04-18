@@ -29,6 +29,7 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
+import org.osgi.service.event.propertytypes.EventTopics;
 import org.osgi.service.metatype.annotations.Designate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +44,7 @@ import io.openems.edge.bridge.http.api.BridgeHttpFactory;
 import io.openems.edge.bridge.http.api.HttpMethod;
 import io.openems.edge.common.component.AbstractOpenemsComponent;
 import io.openems.edge.common.component.OpenemsComponent;
+import io.openems.edge.common.event.EdgeEventConstants;
 import io.openems.edge.common.modbusslave.ModbusSlaveNatureTable;
 import io.openems.edge.common.modbusslave.ModbusSlaveTable;
 import io.openems.edge.meter.api.ElectricityMeter;
@@ -62,6 +64,11 @@ import io.openems.edge.timedata.api.utils.CalculateEnergyFromPower;
 				"type=PRODUCTION" //
 		})
 
+@EventTopics({ //
+	EdgeEventConstants.TOPIC_CYCLE_AFTER_PROCESS_IMAGE, //
+	EdgeEventConstants.TOPIC_CYCLE_BEFORE_CONTROLLERS //
+})
+
 public class OpendtuImpl extends AbstractOpenemsComponent implements Opendtu, ElectricityMeter, OpenemsComponent,
 		EventHandler, TimedataProvider, ManagedSymmetricPvInverter {
 
@@ -71,12 +78,9 @@ public class OpendtuImpl extends AbstractOpenemsComponent implements Opendtu, El
 	private BridgeHttpFactory httpBridgeFactory;
 	private BridgeHttp httpBridge;
 
-	@Reference(policy = ReferencePolicy.DYNAMIC, //
-			policyOption = ReferencePolicyOption.GREEDY, //
-			cardinality = ReferenceCardinality.OPTIONAL //
-	)
 
-	private volatile Timedata timedata;
+	@Reference(policy = ReferencePolicy.STATIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.MANDATORY)
+	private volatile Timedata timedata = null;
 
 	private final CalculateEnergyFromPower calculateActualEnergy = new CalculateEnergyFromPower(this,
 			ElectricityMeter.ChannelId.ACTIVE_PRODUCTION_ENERGY);
@@ -359,14 +363,22 @@ public class OpendtuImpl extends AbstractOpenemsComponent implements Opendtu, El
 		return b.toString();
 	}
 
+
 	@Override
 	public void handleEvent(Event event) {
-		this.calculateEnergy();
+		// super.handleEvent(event);
 		if (!this.isEnabled()) {
 			return;
 		}
-	}
+		switch (event.getTopic()) {
+		case EdgeEventConstants.TOPIC_CYCLE_AFTER_PROCESS_IMAGE:
 
+			this.calculateEnergy();
+			break;
+		}
+	}	
+	
+	
 	public void setActivePowerLimit(int powerLimit) throws OpenemsNamedException {
 		boolean skipProcessing = false;
 		for (InverterData inverterData : this.inverterDataMap.values()) {

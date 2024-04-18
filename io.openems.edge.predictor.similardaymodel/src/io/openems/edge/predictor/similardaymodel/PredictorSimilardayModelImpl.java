@@ -148,22 +148,40 @@ public class PredictorSimilardayModelImpl extends AbstractPredictor implements P
 	 * @param arrlist array list of all data.
 	 * @param n       number of data per day.
 	 * @return 2dimension array list
-	 */
+	 
 	private static List<List<Integer>> getSlicedArrayList(List<Integer> arrlist, int n) {
+		
+		var m = arrlist.size();
 		List<List<Integer>> twoDimensionalArrayList = new ArrayList<>();
 		for (var i = 0; i < arrlist.size(); i = i + n) {
+			
+	        //int end = Math.min(i + n, arrlist.size()); // Stellt sicher, dass der Index innerhalb der Grenzen bleibt
+	        //twoDimensionalArrayList.add(arrlist.subList(i, end));			
 			twoDimensionalArrayList.add(arrlist.subList(i, i + n));
 		}
 		return twoDimensionalArrayList;
 
 	}
+*/
+	private static List<List<Integer>> getSlicedArrayList(List<Integer> arrlist, int n) {
+	    var m = arrlist.size();
+	    List<List<Integer>> twoDimensionalArrayList = new ArrayList<>();
+	    for (var i = 0; i < m; i = i + n) {
+	        int end = Math.min(i + n, m); // Ensures the index stays within bounds
+	        twoDimensionalArrayList.add(arrlist.subList(i, end));
+	    }
+	    return twoDimensionalArrayList;
+	}
 
+	
+	
+	
 	/**
 	 * This methods get the average of data based on the indexes.
 	 *
 	 * @param twoDimensionalArrayList The actual data.
 	 * @return Average values of the last four days.
-	 */
+	 
 	private static List<Integer> getAverage(List<List<Integer>> twoDimensionalArrayList) {
 		List<Integer> averageList = new ArrayList<>();
 		var rows = twoDimensionalArrayList.size();
@@ -180,6 +198,34 @@ public class PredictorSimilardayModelImpl extends AbstractPredictor implements P
 		return averageList;
 
 	}
+	*/
+	
+	private static List<Integer> getAverage(List<List<Integer>> twoDimensionalArrayList) {
+
+	    
+	    List<Integer> averageList = new ArrayList<>();
+	    int maxCols = twoDimensionalArrayList.stream().mapToInt(List::size).max().orElse(0); // Determine the max column size
+
+	    for (var i = 0; i < maxCols; i++) {
+	        var sumRow = 0;
+	        var validRows = 0; // Count of non-null rows for the current column
+	        for (var j = 0; j < twoDimensionalArrayList.size(); j++) {
+	            List<Integer> row = twoDimensionalArrayList.get(j);
+	            if (i < row.size() && row.get(i) != null) { // Safely check if index exists and is non-null
+	                sumRow += row.get(i);
+	                validRows++;
+	            }
+	        }
+	        if (validRows > 0) {
+	            averageList.add(sumRow / validRows); // Compute average based on valid rows only
+	        } else {
+	            averageList.add(0); // Or handle this case as appropriate for your application
+	        }
+	    }
+	    return averageList;
+	}
+	
+	
 
 	/**
 	 * Data manipulation, to get the proper indexes.
