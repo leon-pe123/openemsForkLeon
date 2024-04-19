@@ -1,4 +1,4 @@
-package io.openems.edge.solaredge.hybrid.ess;
+package io.openems.edge.solaredge.common;
 
 public class AverageCalculator {
     private int[] values;

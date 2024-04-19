@@ -642,5 +642,12 @@ public interface SolaredgeDcCharger extends EssDcCharger, OpenemsComponent {
 	public default void setPvPowerControlMode(ActiveInactive value) throws OpenemsNamedException {
 		this.getSetPvPowerControlModeChannel().setNextWriteValue(value);
 	}
+	
+
+	/**
+	 * Sets Limits for PV-Production. The limitation refers to AC-side
+	 * (PV-production + DC-Charging may exeed this value)
+	 */
+	void _calculateAndSetPvPowerLimit(int maxPvPower);	
 
 }

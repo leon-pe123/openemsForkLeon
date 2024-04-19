@@ -312,7 +312,20 @@ public interface SolarEdgeHybridEss extends OpenemsComponent {
 				.unit(Unit.WATT) //
 				.persistencePriority(PersistencePriority.LOW)),// defined in external file
 		
-
+		/**
+		 * Current charge power to or from battery
+		 * Negative values for charging
+		 *
+		 * <ul>
+		 * <li>Interface: Ess
+		 * <li>Type: Integer
+		 * <li>Unit: W
+		 * <li>
+		 * </ul>
+		 */
+		CHARGE_POWER(Doc.of(OpenemsType.INTEGER) //
+				.unit(Unit.WATT) //
+				.persistencePriority(PersistencePriority.LOW)),
 
 
 		/*
@@ -979,6 +992,28 @@ public interface SolarEdgeHybridEss extends OpenemsComponent {
 		return this.channel(ChannelId.GRID_POWER_SCALE);
 	}
 	
+	
+	/**
+	 *
+	 *
+	 *
+	 *
+	 */
+	public default Value<Integer> getChargePower() {
+		return this.getChargePowerChannel().value();
+	}
+
+	
+	/**
+	 * 
+	 *
+	 * @return the Channel
+	 */
+	public default IntegerReadChannel getChargePowerChannel() {
+		return this.channel(ChannelId.CHARGE_POWER);
+	}
+		
+	
 	/**
 	 * Gets the Active Power in [W]. Negative values for Charge; positive for
 	 * Discharge. See {@link ChannelId#ACTIVE_POWER}.
@@ -989,7 +1024,7 @@ public interface SolarEdgeHybridEss extends OpenemsComponent {
 		return this.getMaxChargeContinuesPowerChannel().value();
 	}
 
-	//###########################
+	
 	/**
 	 * Gets the Channel for {@link ChannelId#ACTIVE_POWER}.
 	 *

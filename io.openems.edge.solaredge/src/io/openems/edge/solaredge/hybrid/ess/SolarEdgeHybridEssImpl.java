@@ -18,10 +18,14 @@ import org.osgi.service.event.EventHandler;
 import org.osgi.service.event.propertytypes.EventTopics;
 import io.openems.edge.common.event.EdgeEventConstants;
 import org.osgi.service.metatype.annotations.Designate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableMap;
 import io.openems.common.channel.AccessMode;
 import io.openems.common.exceptions.OpenemsException;
 import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
+
 import io.openems.edge.bridge.modbus.api.BridgeModbus;
 import io.openems.edge.bridge.modbus.api.ElementToChannelConverter;
 import io.openems.edge.bridge.modbus.api.ModbusComponent;
@@ -57,6 +61,7 @@ import io.openems.edge.timedata.api.utils.CalculateEnergyFromPower;
 import io.openems.edge.solaredge.enums.AcChargePolicy;
 import io.openems.edge.solaredge.enums.ChargeDischargeMode;
 import io.openems.edge.solaredge.charger.SolaredgeDcCharger;
+import io.openems.edge.solaredge.common.AverageCalculator;
 
 @Designate(ocd = Config.class, factory = true)
 @Component(//
@@ -75,12 +80,15 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	private static final int READ_FROM_MODBUS_BLOCK = 1;
 	private final List<SolaredgeDcCharger> chargers = new ArrayList<>();
 
+	private final Logger log = LoggerFactory.getLogger(SolarEdgeHybridEss.class);
+
 	// Hardware-Limits
+	// ToDo: make configurable
 	protected static final int HW_MAX_APPARENT_POWER = 10000;
 	protected static final int HW_ALLOWED_CHARGE_POWER = -5000;
 	protected static final int HW_ALLOWED_DISCHARGE_POWER = 5000;
-	
-	
+
+	protected static final int HW_TOLERANCE = 500; // Tolerance in Watt before new charge power value is applied
 
 	// AC-side
 	// private final CalculateEnergyFromPower calculateAcChargeEnergyCalculated =
@@ -102,9 +110,6 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	private final CalculateEnergyFromPower calculateDcDischargeEnergy = new CalculateEnergyFromPower(this,
 			HybridEss.ChannelId.DC_DISCHARGE_ENERGY);
 
-	private int cycleCounter = 60;
-	// private boolean sunspecInit = false; // Experimental. Gets true if
-	// SunspecInitialization is through
 
 	// Calculate moving average over last x values - we use 5 here
 	private AverageCalculator acPowerAverageCalculator = new AverageCalculator(5);
@@ -113,8 +118,6 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	private Config config;
 
 	private int originalActivePowerWanted;
-	private int activePowerLimit;  // Limit for the whole system including PC surplus power
-	//private int pvPower;
 	private String errorOnAverage = "";
 
 	@Reference
@@ -145,7 +148,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 				ManagedSymmetricEss.ChannelId.values(), //
 				SolarEdgeHybridEss.ChannelId.values());
 
-		addStaticModbusTasks(this.getModbusProtocol());
+		this.addStaticModbusTasks(this.getModbusProtocol());
 
 	}
 
@@ -182,92 +185,59 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 
 	@Override
 	public void applyPower(int activePowerWanted, int reactivePowerWanted) throws OpenemsNamedException {
-		cycleCounter++;
-		errorOnAverage = "";
-		
 
-		
+		Integer surplusPower = this.getSurplusPower(); // is NULL if battery´s not fully charged yet
+		// Integer gridPower = this.getGridPower().get();
+		// Integer dcChargePower = this.getChargePower().get();
 
-
-		this.originalActivePowerWanted = activePowerWanted;
-		this.activePowerWantedAverageCalculator.addValue(activePowerWanted);
-
-		// If the difference between actual PowerWanted and the moving average over the
-		// last 5 values is to high - don´t apply ChargePower directly
-		if (Math.abs(activePowerWantedAverageCalculator.getAverage() - activePowerWanted) > 500) {
-			errorOnAverage = "| Error On Average: Wanted " + activePowerWanted + "/Avg: "
-					+ activePowerWantedAverageCalculator.getAverage();
-			activePowerWanted = activePowerWantedAverageCalculator.getAverage();
-
+		if (surplusPower != null && surplusPower > activePowerWanted) { // Battery is charged. We have to limit
+			// PV-production
+			int powerPerCharger = Math.round(activePowerWanted / this.chargers.size());
+			for (SolaredgeDcCharger charger : this.chargers) {
+				charger._calculateAndSetPvPowerLimit(powerPerCharger);
+			}
 		}
 
-		this._setChargePowerWanted(activePowerWanted);
+		this.applyChargePower(activePowerWanted);
 
-		// Read-only mode -> switch to max. self consumption automatic
+	}
+
+	private void applyPowerSettings(Integer chargePower, int maxChargePower, int maxDischargePower) {
+		try {
+			this._setAllowedChargePower(maxChargePower);
+			this._setAllowedDischargePower(maxDischargePower);
+			this._setChargePowerWanted(chargePower);
+			this.channel(SolarEdgeHybridEss.ChannelId.CHARGE_POWER).setNextValue(chargePower);
+
+			// setPowerModes(chargePower, maxChargePower, maxDischargePower);
+			adjustChargePowerModes(chargePower);
+		} catch (OpenemsNamedException e) {
+			this.logError(this.log, "DC ChargePower NOT set: " + e.getMessage());
+		}
+	}
+
+	/**
+	 * Applies charge power to the battery.
+	 */
+	public void applyChargePower(Integer chargePower) {
 		if (this.config.readOnlyMode()) {
-			if (cycleCounter >= 10) {
-				cycleCounter = 0;
-				// Switch to automatic mode
-				this._setControlMode(ControlMode.SE_CTRL_MODE_MAX_SELF_CONSUMPTION);
-			}
+			switchToAutomaticMode();
 			return;
-		} else {
-
-			int maxDischargeContinuesPower = getMaxDischargeContinuesPower().orElse(0); // Positive for Discharge
-			int maxChargeContinuesPower = getMaxChargeContinuesPower().orElse(0) * -1; // Negative for charging
-
-			this._setControlMode(ControlMode.SE_CTRL_MODE_REMOTE); // Now the device can be remote controlled
-			this._setAcChargePolicy(AcChargePolicy.SE_CHARGE_DISCHARGE_MODE_ALWAYS);
-
-			// set Remote Control Modus if it´s not set or every 10 cycles. // ToDO: change
-			// Counter to time-relative
-			if (isControlModeRemote() == false || isStorageChargePolicyAlways() == false || cycleCounter >= 10) {
-
-				// The next 2 are fallback values which should become active after the 60
-				// seconds
-				// timeout
-				this._setChargeDischargeDefaultMode(ChargeDischargeMode.SE_CHARGE_POLICY_MAX_SELF_CONSUMPTION);
-				this._setRemoteControlTimeout(60);
-
-				cycleCounter = 0;
-
-			}
-
-			// Check if configured Limits are less than hardware limits
-			if (config.DischargePowerLimit() < maxDischargeContinuesPower) {
-				maxDischargeContinuesPower = config.DischargePowerLimit();
-			}
-
-			// Check if configured Limits are less than hardware limits
-			if ((config.ChargePowerLimit() * -1) > maxChargeContinuesPower) {
-				maxChargeContinuesPower = (config.ChargePowerLimit() * -1);
-			}
-
-			// We assume to be in RC-Mode
-			_setAllowedChargePower(maxChargeContinuesPower);
-			_setAllowedDischargePower(maxDischargeContinuesPower);
-
-			if (activePowerWanted < 0) { // Negative Values are for charging
-				if (maxChargeContinuesPower > activePowerWanted) {
-					activePowerWanted = maxChargeContinuesPower;
-				}
-				this._setRemoteControlCommandMode(ChargeDischargeMode.SE_CHARGE_POLICY_PV_AC); // Mode for charging);
-				this._setMaxChargePower((activePowerWanted * -1));// Values for register must be positive
-				this._setMaxDischargePower(0);
-
-			} else {
-				if (maxDischargeContinuesPower < activePowerWanted) {
-					activePowerWanted = maxDischargeContinuesPower;
-				}
-
-				this._setRemoteControlCommandMode(ChargeDischargeMode.SE_CHARGE_POLICY_MAX_EXPORT); // Mode for
-																									// Discharging);
-				this._setMaxDischargePower(activePowerWanted);
-				this._setMaxChargePower(0);
-			}
-
 		}
 
+		this.originalActivePowerWanted = chargePower;
+		this.activePowerWantedAverageCalculator.addValue(chargePower);
+		chargePower = adjustChargePowerBasedOnAverage(chargePower);
+
+		try {
+			configureChargeDischargeModes();
+		} catch (OpenemsNamedException e) {
+
+		}
+		int maxDischargePower = determineMaxDischargePower();
+		int maxChargePower = determineMaxChargePower();
+
+		applyPowerSettings(chargePower, maxChargePower, maxDischargePower);
 	}
 
 	private void setLimits() {
@@ -279,6 +249,9 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		super.setModbus(modbus);
 	}
 
+	/**
+	 * Internal mode from SolarEdge
+	 */
 	private boolean isControlModeRemote() {
 
 		EnumReadChannel controlModeChannel = this.channel(SolarEdgeHybridEss.ChannelId.CONTROL_MODE);
@@ -294,6 +267,332 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 
 		return acChargePolicy == AcChargePolicy.SE_CHARGE_DISCHARGE_MODE_ALWAYS;
 	}
+
+
+	/**
+	 * SolarEdge provides max. usable Capacity. So we can calculate current useable
+	 * capacity
+	 */
+	private void installListener() {
+		this.getCapacityChannel().onUpdate(value -> {
+			Integer soc = this.getSoc().get();
+
+			if (soc == null) {
+				return;
+			}
+			if (soc > 0) {
+				int useableCapacity = (int) Math.round((float) value.get() * (soc / 100f));
+				this._setUseableCapacity(useableCapacity);
+
+			}
+
+		});
+
+	}
+
+	public void _setMyActivePower() {
+		// ActivePower is the actual AC output including battery discharging
+		int acPower = this.getAcPower().orElse(0);
+		int acPowerScale = this.getAcPowerScale().orElse(0);
+		double acPowerValue = acPower * Math.pow(10, acPowerScale);
+
+		int dcPower = this.getDcPower().orElse(0);
+		int dcPowerScale = this.getDcPowerScale().orElse(0);
+		double dcPowerValue = dcPower * Math.pow(10, dcPowerScale);
+
+		// The problem is that ac-power never gets negative (e.g. when charging battery
+		// from grid)
+		// so AC-Power can´t be used for further calculation.
+		// We set DC-Power if: AC-Power is 0 AND DC-Power is negative
+		// Yes, this look weird
+		if (acPowerValue == 0 && dcPowerValue < 0) {
+			acPowerValue = dcPowerValue;
+		}
+
+		acPowerAverageCalculator.addValue((int) acPowerValue);
+		// Experimental!
+		// to avoid scaling effects only values are valid that do not differ more than
+		// 1000W
+		if (Math.abs(acPowerAverageCalculator.getAverage() - acPowerValue) < 1000) {
+			this._setActivePower((int) acPowerValue);
+		}
+
+
+	}
+
+	@Override
+	protected void onSunSpecInitializationCompleted() {
+		// TODO Add mappings for registers from S1 and S103
+
+		this.mapFirstPointToChannel(//
+				ManagedSymmetricPvInverter.ChannelId.MAX_APPARENT_POWER, //
+				ElementToChannelConverter.DIRECT_1_TO_1, //
+				DefaultSunSpecModel.S120.W_RTG);
+
+		// AC-Output from the Inverter. Could be the combination from PV + battery
+		/*
+		 * this.mapFirstPointToChannel(// SymmetricEss.ChannelId.ACTIVE_POWER, //
+		 * ElementToChannelConverter.DIRECT_1_TO_1, // DefaultSunSpecModel.S103.W);
+		 */
+
+		this.mapFirstPointToChannel(//
+				SymmetricEss.ChannelId.REACTIVE_POWER, //
+				ElementToChannelConverter.DIRECT_1_TO_1, //
+				DefaultSunSpecModel.S103.V_AR);
+		this.setLimits();
+
+		this.mapFirstPointToChannel(//
+				SymmetricEss.ChannelId.ACTIVE_DISCHARGE_ENERGY, //
+				ElementToChannelConverter.DIRECT_1_TO_1, //
+				DefaultSunSpecModel.S103.WH); // 103.WH holds value for lifetime production (battery + pv). Remember:
+												// battery can also be loaded from AC/grid
+
+		// sunspecInit = true;
+
+	}
+
+	@Override
+	@Deactivate
+	protected void deactivate() {
+		super.deactivate();
+	}
+
+	@Override
+	public void handleEvent(Event event) {
+		// super.handleEvent(event);
+
+		switch (event.getTopic()) {
+		case EdgeEventConstants.TOPIC_CYCLE_EXECUTE_WRITE:
+			this._setMyActivePower();
+			break;
+		case EdgeEventConstants.TOPIC_CYCLE_BEFORE_CONTROLLERS:
+			this._setMyActivePower();
+			this.setLimits();
+			break;
+		case EdgeEventConstants.TOPIC_CYCLE_AFTER_PROCESS_IMAGE:
+			this._setMyActivePower();
+			this.calculateEnergy();
+			break;
+		}
+	}
+
+	@Override
+	public Power getPower() {
+		return this.power;
+	}
+
+	@Override
+	public int getPowerPrecision() {
+		//
+		return 1;
+	}
+
+	@Override
+	public boolean isManaged() {
+		// return true;
+
+		// Just for Testing
+		return !this.config.readOnlyMode();
+	}
+
+	/**
+	 * Calculate the Energy values from DcDischargePower. This should be the
+	 * charging power from or to battery.
+	 * 
+	 * negative values for Charge; positive for Discharge
+	 */
+	private void calculateEnergy() {
+		// Calculate Energy
+
+		// Actual Power DC from or to battery
+		var activeDcPower = this.getDcDischargePower().get(); // Instantaneous power to or from battery
+
+		if (activeDcPower == null) {
+			// Not available
+			this.calculateDcChargeEnergy.update(null);
+			this.calculateDcDischargeEnergy.update(null);
+		} else if (activeDcPower > 0) {
+			// DisCharging Battery
+			this.calculateDcChargeEnergy.update(0);
+			this.calculateDcDischargeEnergy.update(activeDcPower);
+		} else if (activeDcPower < 0) {
+			// Charging Battery
+			this.calculateDcChargeEnergy.update(activeDcPower * -1);
+			this.calculateDcDischargeEnergy.update(0);
+		} else { // UNDEFINED??
+			this.calculateDcChargeEnergy.update(null);
+			this.calculateDcDischargeEnergy.update(null);
+		}
+
+		/*
+		 * Calculate AC Energy AC Energy out/in the ESS including: - AC-Production (from
+		 * PV) - Battery Discharging (producing AC) - Sell to grid - Consumption
+		 * 
+		 * DC-Output, i.e. Charging the battery is NOT included
+		 */
+		var activeAcPower = this.getActivePower().get(); // AC-Power never gets negative. So it´s AC power out of the
+															// ESS. Actually we don´t need the following calculation
+		if (activeAcPower == null) {
+			// Not available
+			this.calculateAcChargeEnergy.update(null);
+			// this.calculateAcDischargeEnergy.update(null); // Mapped to SunSpec register
+			// 103Wh.Energy leaving the hybrid-system: battery & PV
+		} else if (activeAcPower > 0) {
+			// Discharge
+			this.calculateAcChargeEnergy.update(0);
+			// this.calculateAcDischargeEnergy.update(activeAcPower);
+		} else if (activeAcPower < 0) {
+			// Charge
+			this.calculateAcChargeEnergy.update(activeAcPower * -1);
+			// this.calculateAcDischargeEnergy.update(activeAcPower);
+		} else {
+			// Charge
+			this.calculateAcChargeEnergy.update(0);
+			// this.calculateAcDischargeEnergy.update(0);
+		}
+
+	}
+
+	@Override
+	public ModbusSlaveTable getModbusSlaveTable(AccessMode accessMode) {
+		return new ModbusSlaveTable(//
+				OpenemsComponent.getModbusSlaveNatureTable(accessMode), //
+				SymmetricEss.getModbusSlaveNatureTable(accessMode), //
+				HybridEss.getModbusSlaveNatureTable(accessMode), //
+				this.getModbusSlaveNatureTable(accessMode)
+
+		);
+	}
+
+	public void handleSurplusPower() {
+		// ToDo: Handle Power limitations from controllers
+	}
+
+	@Override
+	public Integer getSurplusPower() {
+		// TODO logic is insufficient
+		if (this.getSoc().orElse(0) < 99) {
+			return null;
+		}
+		var productionPower = this.getPvProductionPower();
+		if (productionPower == null || productionPower < 100) {
+			return null;
+		}
+		return productionPower + 200 /* discharge more than PV production to avoid PV curtail */;
+	}
+
+	/*
+	 * @Override public Integer getSurplusPower() { // ToDo: this does not feel like
+	 * the right logic Integer dcDischargePower = this.getDcDischargePower().get();
+	 * // Gets the DC Discharge Power in [W]. Negative // values for Charge;
+	 * positive for // Integer activePower = this.getActivePower().get();
+	 * 
+	 * var productionPower = this.getPvProductionPower(); if (productionPower ==
+	 * null || productionPower < 100 || productionPower == null) { return null; }
+	 * return productionPower - Math.abs(dcDischargePower) + 200 // discharge more
+	 * than PV production to avoid PV // curtail - copied from Goodwe-Impl. ///;
+	 * 
+	 * }
+	 */
+	/**
+	 * Gets PV production power from charger(s).
+	 * 
+	 * @return PV production power in Watts
+	 */
+	public Integer getPvProductionPower() {
+		Integer pvProductionPower = null;
+		for (SolaredgeDcCharger charger : this.chargers) {
+			pvProductionPower = TypeUtils.sum(pvProductionPower, charger.getActualPower().get());
+		}
+		return pvProductionPower;
+	}
+
+	/**
+	 * Uses Info Log for further debug features.
+	 */
+	@Override
+	protected void logDebug(Logger log, String message) {
+		if (this.config.debugMode()) {
+			this.logInfo(this.log, message);
+		}
+	}
+
+	private void configureChargeDischargeModes() throws OpenemsNamedException {
+		if (!isControlModeRemote() || !isStorageChargePolicyAlways()) {
+			this._setChargeDischargeDefaultMode(ChargeDischargeMode.SE_CHARGE_POLICY_MAX_SELF_CONSUMPTION);
+			this._setRemoteControlTimeout(60);
+			
+		}
+	}
+
+	private int determineMaxDischargePower() {
+		int maxDischargePower = getMaxDischargeContinuesPower().orElse(0);
+		if (config.DischargePowerLimit() < maxDischargePower) {
+			return config.DischargePowerLimit();
+		}
+		return maxDischargePower;
+	}
+
+	private int determineMaxChargePower() {
+		int maxChargePower = getMaxChargeContinuesPower().orElse(0) * -1;
+		if ((config.ChargePowerLimit() * -1) > maxChargePower) {
+			return (config.ChargePowerLimit() * -1);
+		}
+		return maxChargePower;
+	}
+
+	private void switchToAutomaticMode() {
+		try {
+			this._setControlMode(ControlMode.SE_CTRL_MODE_MAX_SELF_CONSUMPTION);
+		} catch (OpenemsNamedException e) {
+			this.logError(this.log, "Cannot fall back to automatic mode " + e.getMessage());
+		}
+	}
+
+	/**
+	 * We use a floating average out of the last 5 values to smooth operation.
+	 * 
+	 * */
+	private Integer adjustChargePowerBasedOnAverage(Integer chargePower) {
+		if (Math.abs(this.activePowerWantedAverageCalculator.getAverage() - chargePower) > HW_TOLERANCE) {
+			this.logDebug(this.log, "| Error On Average: Wanted " + chargePower + "/Avg: "
+					+ this.activePowerWantedAverageCalculator.getAverage());
+			return this.activePowerWantedAverageCalculator.getAverage();
+		}
+		return chargePower;
+	}
+
+	/**
+	 * Different modes for charging / discharging have to be applied
+	 * */
+	private void adjustChargePowerModes(Integer chargePower) throws OpenemsNamedException {
+		if (chargePower < 0) {
+			applyChargeMode(chargePower);
+		} else {
+			applyDischargeMode(chargePower);
+		}
+	}
+
+	/**
+	 * Applies target charge power: 1. Set the right Mode to SolarEdge 2. Apply
+	 * target power. This is directly written to the device
+	 */
+	private void applyChargeMode(Integer chargePower) throws OpenemsNamedException {
+		this._setRemoteControlCommandMode(ChargeDischargeMode.SE_CHARGE_POLICY_PV_AC);
+		this._setMaxChargePower(Math.abs(chargePower));
+		this._setMaxDischargePower(0);
+	}
+
+	/**
+	 * Applies target Discharge power: 1. Set the right Mode to SolarEdge 2. Apply
+	 * target power. This is directly written to the device
+	 */
+	private void applyDischargeMode(Integer chargePower) throws OpenemsNamedException {
+		this._setRemoteControlCommandMode(ChargeDischargeMode.SE_CHARGE_POLICY_MAX_EXPORT);
+		this._setMaxDischargePower(chargePower);
+		this._setMaxChargePower(0);
+	}
+	
 
 	/**
 	 * Adds static modbus tasks.
@@ -411,91 +710,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 								new FloatDoublewordElement(0xE010).wordOrder(WordOrder.LSWMSW)) // Max. discharge power.
 																								// Positive values
 				));
-	}
-
-	private void installListener() {
-		this.getCapacityChannel().onUpdate(value -> {
-			Integer soc = this.getSoc().get();
-
-			if (soc == null) {
-				return;
-			}
-			if (soc > 0) {
-				int useableCapacity = (int) Math.round((float) value.get() * (soc / 100f));
-				this._setUseableCapacity(useableCapacity);
-
-			}
-
-		});
-
-	}
-
-	public void _setMyActivePower() {
-		// ActivePower is the actual AC output including battery discharging
-		int acPower = this.getAcPower().orElse(0);
-		int acPowerScale = this.getAcPowerScale().orElse(0);
-		double acPowerValue = acPower * Math.pow(10, acPowerScale);
-
-		int dcPower = this.getDcPower().orElse(0);
-		int dcPowerScale = this.getDcPowerScale().orElse(0);
-		double dcPowerValue = dcPower * Math.pow(10, dcPowerScale);
-
-		// The problem is that ac-power never gets negative (e.g. when charging battery
-		// from grid)
-		// so AC-Power can´t be used for further calculation.
-		// We set DC-Power if: AC-Power is 0 AND DC-Power is negative
-		// Yes, this look weird
-		if (acPowerValue == 0 && dcPowerValue < 0) {
-			acPowerValue = dcPowerValue;
-		}
-
-		acPowerAverageCalculator.addValue((int) acPowerValue);
-		// Experimental!
-		// to avoid scaling effects only values are valid that do not differ more than
-		// 1000W
-		if (Math.abs(acPowerAverageCalculator.getAverage() - acPowerValue) < 1000) {
-			this._setActivePower((int) acPowerValue);
-		}
-
-		// ToDo
-		this.activePowerLimit = 10000;// limit for the whole system including PV surplus
-		//this.pvPower = this.getPvPower(chargers);
-		if (this.activePowerLimit > acPowerValue) {
-			this.handleSurplusPower();  // Power limitations have to be set
-		}
-		
-	}
-
-	@Override
-	protected void onSunSpecInitializationCompleted() {
-		// TODO Add mappings for registers from S1 and S103
-
-		this.mapFirstPointToChannel(//
-				ManagedSymmetricPvInverter.ChannelId.MAX_APPARENT_POWER, //
-				ElementToChannelConverter.DIRECT_1_TO_1, //
-				DefaultSunSpecModel.S120.W_RTG);
-
-		// AC-Output from the Inverter. Could be the combination from PV + battery
-		/*
-		 * this.mapFirstPointToChannel(// SymmetricEss.ChannelId.ACTIVE_POWER, //
-		 * ElementToChannelConverter.DIRECT_1_TO_1, // DefaultSunSpecModel.S103.W);
-		 */
-
-		this.mapFirstPointToChannel(//
-				SymmetricEss.ChannelId.REACTIVE_POWER, //
-				ElementToChannelConverter.DIRECT_1_TO_1, //
-				DefaultSunSpecModel.S103.V_AR);
-		this.setLimits();
-
-		this.mapFirstPointToChannel(//
-				SymmetricEss.ChannelId.ACTIVE_DISCHARGE_ENERGY, //
-				ElementToChannelConverter.DIRECT_1_TO_1, //
-				DefaultSunSpecModel.S103.WH); // 103.WH holds value for lifetime production (battery + pv). Remember:
-												// battery can also be loaded from AC/grid
-
-		// sunspecInit = true;
-
-	}
+	}	
 
 	@Override
 	public String debugLog() {
@@ -545,162 +760,4 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 					+ "|L:" + this.getActivePower().asString();
 	}
 
-	@Override
-	@Deactivate
-	protected void deactivate() {
-		super.deactivate();
-	}
-
-	@Override
-	public void handleEvent(Event event) {
-		// super.handleEvent(event);
-
-		switch (event.getTopic()) {
-		case EdgeEventConstants.TOPIC_CYCLE_EXECUTE_WRITE:
-			this._setMyActivePower();
-			break;
-		case EdgeEventConstants.TOPIC_CYCLE_BEFORE_CONTROLLERS:
-			this._setMyActivePower();
-			this.setLimits();
-			break;
-		case EdgeEventConstants.TOPIC_CYCLE_AFTER_PROCESS_IMAGE:
-			this._setMyActivePower();
-			this.calculateEnergy();
-			break;
-		}
-	}
-
-
-
-	@Override
-	public Power getPower() {
-		return this.power;
-	}
-
-	@Override
-	public int getPowerPrecision() {
-		//
-		return 1;
-	}
-
-	@Override
-	public boolean isManaged() {
-		// return true;
-
-		// Just for Testing
-		return !this.config.readOnlyMode();
-	}
-
-/*	
-	private int getPvPower(List<SolaredgeDcCharger> chargers) {
-		
-		for (EssDcCharger charger : chargers) {
-			pvPower += charger.getActualPower().orElse(0);
-		}
-		return pvPower;
-	}
-*/	
-
-	
-	/**
-	 * Calculate the Energy values from DcDischargePower. This should be the
-	 * charging power from or to battery.
-	 * 
-	 * negative values for Charge; positive for Discharge
-	 */
-	private void calculateEnergy() {
-		// Calculate Energy
-
-		// Actual Power DC from or to battery
-		var activeDcPower = this.getDcDischargePower().get(); // Instantaneous power to or from battery
-
-		if (activeDcPower == null) {
-			// Not available
-			this.calculateDcChargeEnergy.update(null);
-			this.calculateDcDischargeEnergy.update(null);
-		} else if (activeDcPower > 0) {
-			// DisCharging Battery
-			this.calculateDcChargeEnergy.update(0);
-			this.calculateDcDischargeEnergy.update(activeDcPower);
-		} else if (activeDcPower < 0) {
-			// Charging Battery
-			this.calculateDcChargeEnergy.update(activeDcPower * -1);
-			this.calculateDcDischargeEnergy.update(0);
-		} else { // UNDEFINED??
-			this.calculateDcChargeEnergy.update(null);
-			this.calculateDcDischargeEnergy.update(null);
-		}
-
-		/*
-		 * Calculate AC Energy AC Energy out/in the ESS including: - AC-Production (from
-		 * PV) - Battery Discharging (producing AC) - Sell to grid - Consumption
-		 * 
-		 * DC-Output, i.e. Charging the battery is NOT included
-		 */
-		var activeAcPower = this.getActivePower().get(); // AC-Power never gets negative. So it´s AC power out of the
-															// ESS. Actually we don´t need the following calculation
-		if (activeAcPower == null) {
-			// Not available
-			this.calculateAcChargeEnergy.update(null);
-			// this.calculateAcDischargeEnergy.update(null); // Mapped to SunSpec register
-			// 103Wh.Energy leaving the hybrid-system: battery & PV
-		} else if (activeAcPower > 0) {
-			// Discharge
-			this.calculateAcChargeEnergy.update(0);
-			// this.calculateAcDischargeEnergy.update(activeAcPower);
-		} else if (activeAcPower < 0) {
-			// Charge
-			this.calculateAcChargeEnergy.update(activeAcPower * -1);
-			// this.calculateAcDischargeEnergy.update(activeAcPower);
-		} else {
-			// Charge
-			this.calculateAcChargeEnergy.update(0);
-			// this.calculateAcDischargeEnergy.update(0);
-		}
-		
-		
-	}
-
-	@Override
-	public ModbusSlaveTable getModbusSlaveTable(AccessMode accessMode) {
-		return new ModbusSlaveTable(//
-				OpenemsComponent.getModbusSlaveNatureTable(accessMode), //
-				SymmetricEss.getModbusSlaveNatureTable(accessMode), //
-				HybridEss.getModbusSlaveNatureTable(accessMode), //
-				this.getModbusSlaveNatureTable(accessMode)
-						
-				);
-	}
-
-	public void handleSurplusPower() {
-		// ToDo: Handle Power limitations from controllers
-	}
-	
-	@Override
-	public Integer getSurplusPower() {
-		// ToDo: this does not feel like the right logic
-		Integer dcDischargePower = this.getDcDischargePower().get(); //Gets the DC Discharge Power in [W]. Negative values for Charge; positive for
-		//Integer activePower = this.getActivePower().get();
-		
-		var productionPower = this.getPvProductionPower();
-		if (productionPower == null || productionPower < 100 || productionPower == null ) {
-			return null;
-		}
-		return productionPower - Math.abs(dcDischargePower) + 200 /* discharge more than PV production to avoid PV curtail - copied from Goodwe-Impl.*/;
-
-	}	
-	
-	/** 
-	 * Gets PV production power from charger(s).
-	 * 
-	 * @return PV production power in Watts
-	 * */
-	public Integer getPvProductionPower() {
-		Integer pvProductionPower = null;
-		for (SolaredgeDcCharger charger : this.chargers) {
-			pvProductionPower = TypeUtils.sum(pvProductionPower, charger.getActualPower().get());
-		}
-		return pvProductionPower;
-	}
-	
 }

@@ -46,8 +46,8 @@ import io.openems.edge.common.taskmanager.Priority;
 
 import io.openems.edge.ess.dccharger.api.EssDcCharger;
 import io.openems.edge.batteryinverter.sunspec.AbstractSunSpecDcCharger;
+import io.openems.edge.solaredge.common.AverageCalculator;
 import io.openems.edge.solaredge.enums.ActiveInactive;
-import io.openems.edge.solaredge.hybrid.ess.AverageCalculator;
 import io.openems.edge.solaredge.hybrid.ess.SolarEdgeHybridEss;
 import io.openems.edge.timedata.api.Timedata;
 import io.openems.edge.timedata.api.TimedataProvider;
@@ -378,6 +378,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 	 * Sets Limits for PV-Production. The limitation refers to AC-side
 	 * (PV-production + DC-Charging may exeed this value)
 	 */
+	@Override
 	public void _calculateAndSetPvPowerLimit(int maxPvPower) {
 		Integer currentPercent = this.getActivePvPowerLimitPercent().get();
 		Integer maxActivePowerLimit = this.getMaxActivePvPowerLimit().get();
