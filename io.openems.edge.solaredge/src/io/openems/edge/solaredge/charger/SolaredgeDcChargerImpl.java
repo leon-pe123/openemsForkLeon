@@ -269,7 +269,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 						m(SolaredgeDcCharger.ChannelId.MAX_REACTIVE_PV_POWER_LIMIT,
 								new FloatDoublewordElement(62214).wordOrder(WordOrder.LSWMSW)) // F306
 				));
-		
+
 		protocol.addTask(//
 				new FC3ReadRegistersTask(62220, Priority.HIGH, //
 						m(SolaredgeDcCharger.ChannelId.ACTIVE_PV_ACTIVE_POWER_LIMIT,
@@ -277,7 +277,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 						m(SolaredgeDcCharger.ChannelId.ACTIVE_PV_REACTIVE_POWER_LIMIT,
 								new FloatDoublewordElement(62222).wordOrder(WordOrder.LSWMSW)) // F306
 				));
-		
+
 		protocol.addTask(//
 				new FC3ReadRegistersTask(0xE170, Priority.HIGH, // battery-side (DC charge / discharge)
 						m(SolaredgeDcCharger.ChannelId.VOLTAGE_BATT_DC, // Instantaneous Voltage from Solaregde - no
@@ -374,57 +374,70 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 		}
 	}
 
-	public void _calculatePvPowerLimit() {
-	    Integer currentPercent = this.getActivePvPowerLimitPercent().get();
-	    Integer maxActivePowerLimit = this.getMaxActivePvPowerLimit().get();
-	    Integer currentPowerLimit = this.getActivePvActivePowerLimit().get();
+	/**
+	 * Sets Limits for PV-Production. The limitation refers to AC-side
+	 * (PV-production + DC-Charging may exeed this value)
+	 */
+	public void _calculateAndSetPvPowerLimit(int maxPvPower) {
+		Integer currentPercent = this.getActivePvPowerLimitPercent().get();
+		Integer maxActivePowerLimit = this.getMaxActivePvPowerLimit().get();
+		Integer currentPowerLimit = this.getActivePvActivePowerLimit().get();
+		
+		// Configured PV limit is assumed to be the new power limit value in watts
+		int pvLimit = config.pvLimit(); // configured limit
 
-	    // Validate non-null and non-zero conditions to prevent calculation errors
-	    if (currentPowerLimit == null || currentPowerLimit == 0 || maxActivePowerLimit == null || maxActivePowerLimit == 0) {
-	        this.logDebug(this.log, "CurrentPowerLimit or MaxActivePowerLimit is NULL or 0");
-	        return; // Early exit to prevent further processing
-	    }
+		// Validate non-null and non-zero conditions to prevent calculation errors
+		if (currentPowerLimit == null || currentPowerLimit == 0 || maxActivePowerLimit == null
+				|| maxActivePowerLimit == 0 || currentPercent == null || currentPercent == 0) {
+			this.logDebug(this.log, "CurrentPowerLimit or MaxActivePowerLimit is NULL or 0");
+			return; // Early exit to prevent further processing
+		}
+		
+		this.logDebug(this.log,
+				"Current PV Limit: " + maxActivePowerLimit + "W");		
 
-	    // Configured PV limit is assumed to be the new power limit value in watts
-	    Integer configuredPvLimit = config.pvLimit(); 
-	    int tolerance = 5; // % tolerance to avoid unnecessary updates
+				
+		
+		int tolerance = 5; // % tolerance to avoid unnecessary updates
+		if (maxPvPower < pvLimit) {
+			pvLimit = maxPvPower;
+		}
 
-	    // Calculate the new limit as a percentage of the maximum possible hardware limit
-	    Integer newLimitPercent = (int) ((configuredPvLimit * 100.0) / maxActivePowerLimit);
+		// Calculate the new limit as a percentage of the maximum possible hardware
+		// limit
+		Integer newLimitPercent = (int) ((pvLimit * 100.0) / maxActivePowerLimit);
 
-	    // Check that the new limit does not exceed 100% of the hardware capability
-	    if (newLimitPercent > 100) {
-	        this.logDebug(this.log, "Configured PV limit exceeds hardware capabilities. Adjusting to 100%.");
-	        newLimitPercent = 100;
-	    }
+		// Check that the new limit does not exceed 100% of the hardware capability
+		if (newLimitPercent > 100) {
+			this.logDebug(this.log, "Configured PV limit exceeds hardware capabilities. Adjusting to 100%.");
+			newLimitPercent = 100;
+		}
 
-	    // Update only if the change is significant enough to exceed the tolerance
-	    if (Math.abs(newLimitPercent - currentPercent) > tolerance) {
-	        // Activate control mode if it's not already active
-	        if (this.getSetPvPowerControlMode() != ActiveInactive.ACTIVE) {
-	            try {
-	                this.setPvPowerControlMode(ActiveInactive.ACTIVE);
-	            } catch (OpenemsNamedException e) {
-	                this.logDebug(this.log, "Failed to set Control Mode to ACTIVE: " + e.getMessage());
-	                return; // Stop further execution if control mode activation fails
-	            }
-	        }
+		// Update only if the change is significant enough to exceed the tolerance
+		if (Math.abs(newLimitPercent - currentPercent) > tolerance) {
+			// Activate control mode if it's not already active
+			if (this.getSetPvPowerControlMode() != ActiveInactive.ACTIVE) {
+				try {
+					this.setPvPowerControlMode(ActiveInactive.ACTIVE);
+				} catch (OpenemsNamedException e) {
+					this.logDebug(this.log, "Failed to set Control Mode to ACTIVE: " + e.getMessage());
+					return; // Stop further execution if control mode activation fails
+				}
+			}
 
-	        // Attempt to set the new power limit percentage and commit changes
-	        try {
-	            this.setPvPowerLimitPercent(newLimitPercent);
-	            this.commitPvPowerLimit(1); // Send '1' to commit changes
-	            this.logDebug(this.log, "New Power Limit set to: " + newLimitPercent + "%");
-	        } catch (OpenemsNamedException e) {
-	            this.logDebug(this.log, "Failed to set PV Limit in percent: " + e.getMessage());
-	        }
-	    } else {
-	        this.logDebug(this.log,
-	                "No need to adjust limit: New " + newLimitPercent + "% vs. Current " + currentPercent + "%"
-	        );
-	    }
+			// Attempt to set the new power limit percentage and commit changes
+			try {
+				this.setPvPowerLimitPercent(newLimitPercent);
+				this.commitPvPowerLimit(1); // Send '1' to commit changes
+				this.logDebug(this.log, "New Power Limit set to: " + newLimitPercent + "%");
+			} catch (OpenemsNamedException e) {
+				this.logDebug(this.log, "Failed to set PV Limit in percent: " + e.getMessage());
+			}
+		} else {
+			this.logDebug(this.log,
+					"No need to adjust limit: New " + newLimitPercent + "% vs. Current " + currentPercent + "%");
+		}
 	}
-
 
 	@Override
 	public String debugLog() {
@@ -460,11 +473,11 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 			break;
 		case EdgeEventConstants.TOPIC_CYCLE_BEFORE_CONTROLLERS:
 			this._calculateAndSetActualPower();
-			this._calculatePvPowerLimit();
+			//this._calculateAndSetPvPowerLimit(); called from ESS
 			break;
 		case EdgeEventConstants.TOPIC_CYCLE_AFTER_PROCESS_IMAGE:
 			this._calculateAndSetActualPower();
-			this._calculatePvPowerLimit();
+			//this._calculateAndSetPvPowerLimit(); called from ESS
 			break;
 		}
 	}

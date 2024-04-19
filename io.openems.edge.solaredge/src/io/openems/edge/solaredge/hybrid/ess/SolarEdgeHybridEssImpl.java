@@ -43,6 +43,7 @@ import io.openems.edge.common.component.OpenemsComponent;
 import io.openems.edge.common.modbusslave.ModbusSlave;
 import io.openems.edge.common.modbusslave.ModbusSlaveTable;
 import io.openems.edge.common.taskmanager.Priority;
+import io.openems.edge.common.type.TypeUtils;
 import io.openems.edge.ess.api.HybridEss;
 import io.openems.edge.ess.api.ManagedSymmetricEss;
 import io.openems.edge.ess.api.SymmetricEss;
@@ -677,10 +678,29 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	
 	@Override
 	public Integer getSurplusPower() {
-		// TODO Auto-generated method stub
-		return null;
+		// ToDo: this does not feel like the right logic
+		Integer dcDischargePower = this.getDcDischargePower().get(); //Gets the DC Discharge Power in [W]. Negative values for Charge; positive for
+		//Integer activePower = this.getActivePower().get();
+		
+		var productionPower = this.getPvProductionPower();
+		if (productionPower == null || productionPower < 100 || productionPower == null ) {
+			return null;
+		}
+		return productionPower - Math.abs(dcDischargePower) + 200 /* discharge more than PV production to avoid PV curtail - copied from Goodwe-Impl.*/;
+
 	}	
 	
-	
+	/** 
+	 * Gets PV production power from charger(s).
+	 * 
+	 * @return PV production power in Watts
+	 * */
+	public Integer getPvProductionPower() {
+		Integer pvProductionPower = null;
+		for (SolaredgeDcCharger charger : this.chargers) {
+			pvProductionPower = TypeUtils.sum(pvProductionPower, charger.getActualPower().get());
+		}
+		return pvProductionPower;
+	}
 	
 }
