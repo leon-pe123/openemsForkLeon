@@ -3,6 +3,8 @@ package io.openems.edge.solaredge.hybrid.ess;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
@@ -48,6 +50,12 @@ import io.openems.edge.common.modbusslave.ModbusSlave;
 import io.openems.edge.common.modbusslave.ModbusSlaveTable;
 import io.openems.edge.common.taskmanager.Priority;
 import io.openems.edge.common.type.TypeUtils;
+import io.openems.edge.controller.ess.limittotaldischarge.ControllerEssLimitTotalDischarge;
+import io.openems.edge.controller.ess.emergencycapacityreserve.ControllerEssEmergencyCapacityReserve;
+
+
+
+
 import io.openems.edge.ess.api.HybridEss;
 import io.openems.edge.ess.api.ManagedSymmetricEss;
 import io.openems.edge.ess.api.SymmetricEss;
@@ -110,7 +118,6 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	private final CalculateEnergyFromPower calculateDcDischargeEnergy = new CalculateEnergyFromPower(this,
 			HybridEss.ChannelId.DC_DISCHARGE_ENERGY);
 
-
 	// Calculate moving average over last x values - we use 5 here
 	private AverageCalculator acPowerAverageCalculator = new AverageCalculator(5);
 	private AverageCalculator activePowerWantedAverageCalculator = new AverageCalculator(5);
@@ -118,10 +125,11 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	private Config config;
 
 	private int originalActivePowerWanted;
-	private String errorOnAverage = "";
 
 	@Reference
 	private Power power;
+
+	private int minSocPercentage;
 
 	private static final Map<SunSpecModel, Priority> ACTIVE_MODELS = ImmutableMap.<SunSpecModel, Priority>builder()
 			.put(DefaultSunSpecModel.S_1, Priority.LOW) //
@@ -137,6 +145,19 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 
 	@Reference(policy = ReferencePolicy.STATIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.MANDATORY)
 	private volatile Timedata timedata = null;
+
+	
+	@Reference(policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY, //
+			cardinality = ReferenceCardinality.MULTIPLE, //
+			target = "(&(enabled=true)(isReserveSocEnabled=true))")
+	private volatile List<ControllerEssEmergencyCapacityReserve> ctrlEmergencyCapacityReserves = new CopyOnWriteArrayList<>();
+
+	
+	
+	@Reference(policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY, //
+			cardinality = ReferenceCardinality.MULTIPLE, //
+			target = "(enabled=true)")
+	private volatile List<ControllerEssLimitTotalDischarge> ctrlLimitTotalDischarges = new CopyOnWriteArrayList<>();
 
 	public SolarEdgeHybridEssImpl() throws OpenemsException {
 		super(//
@@ -190,11 +211,16 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		// Integer gridPower = this.getGridPower().get();
 		// Integer dcChargePower = this.getChargePower().get();
 
-		if (surplusPower != null && surplusPower > activePowerWanted) { // Battery is charged. We have to limit
+		// negative values are for charging
+		if (surplusPower != null && surplusPower > Math.abs(activePowerWanted)) { // Battery is charged. We have to
+																					// limit
 			// PV-production
-			int powerPerCharger = Math.round(activePowerWanted / this.chargers.size());
+			int powerPerCharger = (int) Math.round(Math.abs(activePowerWanted) / this.chargers.size());
 			for (SolaredgeDcCharger charger : this.chargers) {
-				charger._calculateAndSetPvPowerLimit(powerPerCharger);
+				// charger._calculateAndSetPvPowerLimit(powerPerCharger);
+				this.logDebug(this.log, "Limit per Charger Wanted: " + powerPerCharger + "W");
+				// not working yet
+				// charger._calculateAndSetPvPowerLimit(10000);
 			}
 		}
 
@@ -269,25 +295,64 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	}
 
 
+
 	/**
 	 * SolarEdge provides max. usable Capacity. So we can calculate current useable
 	 * capacity
 	 */
 	private void installListener() {
 		this.getCapacityChannel().onUpdate(value -> {
+			this.checkSocControllers();
 			Integer soc = this.getSoc().get();
+			int minSocPercentage = this.minSocPercentage;
 
 			if (soc == null) {
 				return;
 			}
+
+			if (soc < minSocPercentage) {
+				this._setUseableCapacity(0);
+			} else {
+				soc = soc - minSocPercentage;
+			}
+
 			if (soc > 0) {
 				int useableCapacity = (int) Math.round((float) value.get() * (soc / 100f));
 				this._setUseableCapacity(useableCapacity);
+				this._setUseableSoc(soc);
 
+			} else {
+				this._setUseableCapacity(0);
 			}
 
 		});
 
+	}
+
+	private void checkSocControllers() {
+
+		int minSocTotalDischarge = 0;
+		int actualReserveSoc = 0;
+
+		if (this.ctrlEmergencyCapacityReserves == null || this.ctrlLimitTotalDischarges == null) {
+			return;
+		}
+
+		for (ControllerEssEmergencyCapacityReserve ctrlEmergencyCapacityReserve : this.ctrlEmergencyCapacityReserves) {
+
+			if (ctrlEmergencyCapacityReserve.channel("_PropertyEssId").value().asString().equals(this.id())) {
+				actualReserveSoc = ctrlEmergencyCapacityReserve.getActualReserveSoc().orElse(0);
+			}
+		}
+
+		for (ControllerEssLimitTotalDischarge ctrlLimitTotalDischarge : this.ctrlLimitTotalDischarges) {
+
+			if (ctrlLimitTotalDischarge.channel("_PropertyEssId").value().asString() == this.id()) {
+				minSocTotalDischarge = ctrlLimitTotalDischarge.getMinSoc().orElse(0);
+			}
+		}
+		// take highest value and return
+		this.minSocPercentage = (Math.max(minSocTotalDischarge, actualReserveSoc));
 	}
 
 	public void _setMyActivePower() {
@@ -316,7 +381,6 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		if (Math.abs(acPowerAverageCalculator.getAverage() - acPowerValue) < 1000) {
 			this._setActivePower((int) acPowerValue);
 		}
-
 
 	}
 
@@ -521,7 +585,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		if (!isControlModeRemote() || !isStorageChargePolicyAlways()) {
 			this._setChargeDischargeDefaultMode(ChargeDischargeMode.SE_CHARGE_POLICY_MAX_SELF_CONSUMPTION);
 			this._setRemoteControlTimeout(60);
-			
+
 		}
 	}
 
@@ -552,7 +616,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	/**
 	 * We use a floating average out of the last 5 values to smooth operation.
 	 * 
-	 * */
+	 */
 	private Integer adjustChargePowerBasedOnAverage(Integer chargePower) {
 		if (Math.abs(this.activePowerWantedAverageCalculator.getAverage() - chargePower) > HW_TOLERANCE) {
 			this.logDebug(this.log, "| Error On Average: Wanted " + chargePower + "/Avg: "
@@ -564,7 +628,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 
 	/**
 	 * Different modes for charging / discharging have to be applied
-	 * */
+	 */
 	private void adjustChargePowerModes(Integer chargePower) throws OpenemsNamedException {
 		if (chargePower < 0) {
 			applyChargeMode(chargePower);
@@ -592,7 +656,6 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		this._setMaxDischargePower(chargePower);
 		this._setMaxChargePower(0);
 	}
-	
 
 	/**
 	 * Adds static modbus tasks.
@@ -710,7 +773,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 								new FloatDoublewordElement(0xE010).wordOrder(WordOrder.LSWMSW)) // Max. discharge power.
 																								// Positive values
 				));
-	}	
+	}
 
 	@Override
 	public String debugLog() {
@@ -739,7 +802,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 					+ "|RemoteControlMode "
 					+ this.channel(SolarEdgeHybridEss.ChannelId.REMOTE_CONTROL_COMMAND_MODE).value()
 							.asStringWithoutUnit() //
-					+ errorOnAverage + "\n|ChargePowerWantedAvg " + this.activePowerWantedAverageCalculator.getAverage()
+					+ "\n|ChargePowerWantedAvg " + this.activePowerWantedAverageCalculator.getAverage()
 					+ "|ChargePowerWantedOriginal " + this.originalActivePowerWanted + "|ChargePowerWanted "
 					+ this.getChargePowerWanted().asString()
 

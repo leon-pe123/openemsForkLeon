@@ -1,5 +1,8 @@
 package io.openems.edge.battery.victron;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
@@ -37,6 +40,8 @@ import io.openems.edge.common.modbusslave.ModbusSlaveTable;
 import io.openems.edge.common.startstop.StartStop;
 import io.openems.edge.common.startstop.StartStoppable;
 import io.openems.edge.common.taskmanager.Priority;
+import io.openems.edge.controller.ess.emergencycapacityreserve.ControllerEssEmergencyCapacityReserve;
+import io.openems.edge.controller.ess.limittotaldischarge.ControllerEssLimitTotalDischarge;
 
 //import io.openems.edge.core.appmanager.ComponentUtil;
 
@@ -79,12 +84,18 @@ public class VictronCanBusBatteryImpl extends AbstractOpenemsModbusComponent
 		super.setModbus(modbus);
 	}
 
-	// @Reference(policy = ReferencePolicy.STATIC, policyOption =
-	// ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.OPTIONAL)
-	// private VictronBatteryInverter batteryInverter;
+	@Reference(policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.OPTIONAL)
+	private volatile VictronEss ess;
 
-	@Reference(policy = ReferencePolicy.STATIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.MANDATORY)
-	private VictronEss ess;
+	@Reference(policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY, //
+			cardinality = ReferenceCardinality.MULTIPLE, //
+			target = "(&(enabled=true)(isReserveSocEnabled=true))")
+	private volatile List<ControllerEssEmergencyCapacityReserve> ctrlEmergencyCapacityReserves = new CopyOnWriteArrayList<>();
+
+	@Reference(policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY, //
+			cardinality = ReferenceCardinality.MULTIPLE, //
+			target = "(enabled=true)")
+	private volatile List<ControllerEssLimitTotalDischarge> ctrlLimitTotalDischarges = new CopyOnWriteArrayList<>();
 
 	@Activate
 	protected void activate(ComponentContext context, Config config) throws OpenemsNamedException {
@@ -125,6 +136,32 @@ public class VictronCanBusBatteryImpl extends AbstractOpenemsModbusComponent
 		this._setStartStop(value);
 	}
 
+	private void checkSocControllers() {
+
+		int minSocTotalDischarge = 0;
+		int actualReserveSoc = 0;
+
+		if (this.ess == null || this.ctrlEmergencyCapacityReserves == null || this.ctrlLimitTotalDischarges == null) {
+			return;
+		}
+
+		for (ControllerEssEmergencyCapacityReserve ctrlEmergencyCapacityReserve : this.ctrlEmergencyCapacityReserves) {
+
+			if (ctrlEmergencyCapacityReserve.channel("_PropertyEssId").value().asString().equals(this.ess.id())) {
+				actualReserveSoc = ctrlEmergencyCapacityReserve.getActualReserveSoc().orElse(0);
+			}
+		}
+
+		for (ControllerEssLimitTotalDischarge ctrlLimitTotalDischarge : this.ctrlLimitTotalDischarges) {
+
+			if (ctrlLimitTotalDischarge.channel("_PropertyEssId").value().asString() == this.ess.id()) {
+				minSocTotalDischarge = ctrlLimitTotalDischarge.getMinSoc().orElse(0);
+			}
+		}
+		// take highest value and return
+		this.setMinSocPercentage(Math.max(minSocTotalDischarge, actualReserveSoc));
+	}
+
 	/**
 	 * Registers 309 hold the actual capacity and not battery´s total. So we
 	 * calculate total out of current SoC and battery voltage
@@ -137,6 +174,9 @@ public class VictronCanBusBatteryImpl extends AbstractOpenemsModbusComponent
 
 		this.getCapacityInAmphoursChannel().onUpdate(value -> {
 			var soc = this.getSoc().get();
+
+			// Check if there are SoC-limiting controllers
+			this.checkSocControllers();
 
 			if (soc == null || soc <= 0) {
 				return;

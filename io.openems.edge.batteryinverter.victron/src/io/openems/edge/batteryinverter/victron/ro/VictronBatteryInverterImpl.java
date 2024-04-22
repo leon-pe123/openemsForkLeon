@@ -105,9 +105,9 @@ public class VictronBatteryInverterImpl extends AbstractOpenemsModbusComponent
 		super.setModbus(modbus);
 	}
 
-	@Reference(policy = ReferencePolicy.STATIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.MANDATORY)
-	private VictronEss ess;
-	
+
+	@Reference(policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.OPTIONAL)
+	private volatile VictronEss ess;	
 	
 	@Reference(policy = ReferencePolicy.STATIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.OPTIONAL)
 	private VictronBattery battery;	

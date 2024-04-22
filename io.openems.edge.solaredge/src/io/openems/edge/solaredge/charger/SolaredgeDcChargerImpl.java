@@ -384,6 +384,9 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 		Integer maxActivePowerLimit = this.getMaxActivePvPowerLimit().get();
 		Integer currentPowerLimit = this.getActivePvActivePowerLimit().get();
 		
+		this.logDebug(this.log,
+				"Limit Wanted: " + maxPvPower + "W");		
+		
 		// Configured PV limit is assumed to be the new power limit value in watts
 		int pvLimit = config.pvLimit(); // configured limit
 

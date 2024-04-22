@@ -85,26 +85,26 @@ public class VictronEssImpl extends AbstractOpenemsModbusComponent implements Vi
 	@Reference
 	protected ComponentManager componentManager;
 
-	@Reference(policyOption = ReferencePolicyOption.GREEDY, //
-			cardinality = ReferenceCardinality.OPTIONAL, //
-			target = "(&(enabled=true)(isReserveSocEnabled=true))")
-	private volatile ControllerEssEmergencyCapacityReserve ctrlEmergencyCapacityReserve;
-
-	@Reference(policyOption = ReferencePolicyOption.GREEDY, //
-			cardinality = ReferenceCardinality.OPTIONAL, //
-			target = "(enabled=true)")
-	private volatile ControllerEssLimitTotalDischarge ctrlLimitTotalDischarge;
-
 	@Override
 	@Reference(policy = ReferencePolicy.STATIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.MANDATORY)
 	protected void setModbus(BridgeModbus modbus) {
 		super.setModbus(modbus);
 	}
 
+	// @Reference(policy = ReferencePolicy.DYNAMIC, policyOption =
+	// ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.OPTIONAL)
+	@Reference(policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY)
+	private volatile VictronBatteryInverter batteryInverter;
+
+	// @Reference(policy = ReferencePolicy.DYNAMIC, policyOption =
+	// ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.OPTIONAL)
+	@Reference(policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY)
+	private volatile VictronBattery battery;
+
 	private final Logger log = LoggerFactory.getLogger(VictronEssImpl.class);
 
-	private volatile VictronBatteryInverter batteryInverter;
-	private volatile VictronBattery battery;
+	// private volatile VictronBatteryInverter batteryInverter;
+	// private volatile VictronBattery battery;
 
 	private Config config;
 	private SinglePhase singlePhase = null;
@@ -131,13 +131,14 @@ public class VictronEssImpl extends AbstractOpenemsModbusComponent implements Vi
 
 				SymmetricEss.ChannelId.values(), //
 				ManagedSymmetricEss.ChannelId.values(), //
-				VictronBatteryInverter.ChannelId.values(), // 
-				VictronBattery.ChannelId.values(), // 
+				VictronBatteryInverter.ChannelId.values(), //
+				VictronBattery.ChannelId.values(), //
 				VictronEss.ChannelId.values());
 	}
 
 	@Activate
 	private void activate(ComponentContext context, Config config) throws OpenemsException {
+
 		this.config = config;
 
 		if (super.activate(context, config.id(), config.alias(), config.enabled(), config.modbusUnitId(), this.cm,
@@ -165,23 +166,17 @@ public class VictronEssImpl extends AbstractOpenemsModbusComponent implements Vi
 			SinglePhaseEss.initializeCopyPhaseChannel(this, this.singlePhase);
 		}
 		this._setGridMode(GridMode.ON_GRID);
-		
+
 		if (this.batteryInverter == null) {
-			this.logError(this.log, "ESS->BatteryInverter not activated ");
+			this.logError(this.log, "ESS->BatteryInverter not yet activated ");
 			return;
 		}
 
 		if (this.battery == null) {
-			this.logError(this.log, "ESS->Battery not activated ");
+			this.logError(this.log, "ESS->Battery not yet activated ");
 			return;
 		}
 
-		if (this.batteryInverter.getMaxApparentPower().get() == null) {
-			this.logError(this.log, "ESS->BatteryInverter max. Apparent Power value not available");
-			return;
-		}
-
-		
 	}
 
 	@Deactivate
@@ -319,13 +314,13 @@ public class VictronEssImpl extends AbstractOpenemsModbusComponent implements Vi
 		if (this.batteryInverter.calculateHardwareLimits() == false) {
 			return;
 		}
-		
-		if(this.batteryInverter.getMaxApparentPower().get() == null || this.batteryInverter.getMaxApparentPower().get() == 0) {
+
+		if (this.batteryInverter.getMaxApparentPower().get() == null
+				|| this.batteryInverter.getMaxApparentPower().get() == 0) {
 			this.logError(this.log, "ApplyPower->Max. Apparent Power invalid");
 			return;
 		}
 		this._setMaxApparentPower(this.batteryInverter.getMaxApparentPower().get().intValue());
-		
 
 		MaxChargePower = this.batteryInverter.getMaxChargePower();
 		MaxDischargePower = this.batteryInverter.getMaxDischargePower();
@@ -406,11 +401,9 @@ public class VictronEssImpl extends AbstractOpenemsModbusComponent implements Vi
 			this.calculateEnergy();
 			break;
 		case EdgeEventConstants.TOPIC_CYCLE_BEFORE_CONTROLLERS:
-			this._setMyActivePower();
-			this.calculateEnergy();
-
-			getEssMinSocPercentage(ctrlLimitTotalDischarge, ctrlEmergencyCapacityReserve);
-
+			// this._setMyActivePower();
+			// this.calculateEnergy();
+			// this.checkSocControllers();
 			break;
 
 		}
@@ -472,31 +465,33 @@ public class VictronEssImpl extends AbstractOpenemsModbusComponent implements Vi
 	 * @param ctrlEmergencyCapacityReserves the list of
 	 *                                      {@link ControllerEssEmergencyCapacityReserve}
 	 * @return the value in [%]
+	 * 
+	 *         private void getEssMinSocPercentage(ControllerEssLimitTotalDischarge
+	 *         ctrlLimitTotalDischarge, ControllerEssEmergencyCapacityReserve
+	 *         ctrlEmergencyCapacityReserve) {
+	 * 
+	 *         if (this.batteryInverter == null) { return; }
+	 * 
+	 *         var arsch =
+	 *         ctrlEmergencyCapacityReserve.channel("_PropertyEssId").value().asString();
+	 *         int minSocTotalDischarge = 0; int actualReserveSoc = 0;
+	 * 
+	 *         // if (ctrlLimitTotalDischarge != null &&
+	 *         ctrlLimitTotalDischarge.getMinSoc().get() != null) {
+	 *         minSocTotalDischarge = Math.max(0,
+	 *         ctrlLimitTotalDischarge.getMinSoc().get()); // only positive values }
+	 * 
+	 *         // if (ctrlEmergencyCapacityReserve != null &&
+	 *         ctrlEmergencyCapacityReserve.getActualReserveSoc().get() != null) {
+	 *         actualReserveSoc = Math.max(0,
+	 *         ctrlEmergencyCapacityReserve.getActualReserveSoc().get());
+	 * 
+	 *         }
+	 * 
+	 *         // take highest value and return
+	 *         this.battery.setMinSocPercentage(Math.max(minSocTotalDischarge,
+	 *         actualReserveSoc)); }
 	 */
-	private void getEssMinSocPercentage(ControllerEssLimitTotalDischarge ctrlLimitTotalDischarge,
-			ControllerEssEmergencyCapacityReserve ctrlEmergencyCapacityReserve) {
-
-		if (this.batteryInverter == null) {
-			return;
-		}
-
-		int minSocTotalDischarge = 0;
-		int actualReserveSoc = 0;
-
-		//
-		if (ctrlLimitTotalDischarge != null && ctrlLimitTotalDischarge.getMinSoc().get() != null) {
-			minSocTotalDischarge = Math.max(0, ctrlLimitTotalDischarge.getMinSoc().get()); // only positive values
-		}
-
-		//
-		if (ctrlEmergencyCapacityReserve != null && ctrlEmergencyCapacityReserve.getActualReserveSoc().get() != null) {
-			actualReserveSoc = Math.max(0, ctrlEmergencyCapacityReserve.getActualReserveSoc().get());
-
-		}
-
-		// take highest value and return
-		this.battery.setMinSocPercentage(Math.max(minSocTotalDischarge, actualReserveSoc));
-	}
 
 	@Override
 	protected ModbusProtocol defineModbusProtocol() throws OpenemsException {
@@ -684,17 +679,21 @@ public class VictronEssImpl extends AbstractOpenemsModbusComponent implements Vi
 	@Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
 	@Override
 	public synchronized void setBatteryInverter(VictronBatteryInverter batteryInverter) {
-
 		if (batteryInverter == null) {
+			this.logError(this.log, "Attempt to bind a null BatteryInverter");
 			return;
 		}
-
 		this.batteryInverter = batteryInverter;
+		logInfo(this.log, "Battery Inverter bound successfully.");
 
-		if (this.batteryInverter.getMaxApparentPower().get() == null) {
-			return;
+		// Ensuring that the battery inverter is not null before attempting to get max
+		// apparent power
+		if (this.batteryInverter.getMaxApparentPower().get() != null) {
+			Integer maxApparentPower = this.batteryInverter.getMaxApparentPower().get();
+			this._setMaxApparentPower(maxApparentPower);
+		} else {
+			this.logError(this.log, "ESS->BatteryInverter max. apparent power not set ");
 		}
-		this._setMaxApparentPower(this.batteryInverter.getMaxApparentPower().get());
 	}
 
 	@Override
@@ -703,15 +702,15 @@ public class VictronEssImpl extends AbstractOpenemsModbusComponent implements Vi
 
 	}
 
-
 	@Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
 	@Override
 	public synchronized void setBattery(VictronBattery battery) {
+
 		if (battery == null) {
+			this.logError(this.log, "ESS->Battery not activated ");
 			return;
 		}
 		this.battery = battery;
-
 	}
 
 	@Override
