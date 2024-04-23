@@ -53,14 +53,12 @@ import io.openems.edge.common.type.TypeUtils;
 import io.openems.edge.controller.ess.limittotaldischarge.ControllerEssLimitTotalDischarge;
 import io.openems.edge.controller.ess.emergencycapacityreserve.ControllerEssEmergencyCapacityReserve;
 
-
-
-
 import io.openems.edge.ess.api.HybridEss;
 import io.openems.edge.ess.api.ManagedSymmetricEss;
 import io.openems.edge.ess.api.SymmetricEss;
 //import io.openems.edge.ess.dccharger.api.EssDcCharger;
 import io.openems.edge.ess.power.api.Power;
+import io.openems.edge.meter.api.ElectricityMeter;
 import io.openems.edge.pvinverter.api.ManagedSymmetricPvInverter;
 import io.openems.edge.solaredge.enums.ControlMode;
 import io.openems.edge.timedata.api.Timedata;
@@ -146,18 +144,18 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	@Reference(policy = ReferencePolicy.STATIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.MANDATORY)
 	private volatile Timedata timedata = null;
 
-	
 	@Reference(policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY, //
 			cardinality = ReferenceCardinality.MULTIPLE, //
 			target = "(&(enabled=true)(isReserveSocEnabled=true))")
 	private volatile List<ControllerEssEmergencyCapacityReserve> ctrlEmergencyCapacityReserves = new CopyOnWriteArrayList<>();
 
-	
-	
 	@Reference(policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY, //
 			cardinality = ReferenceCardinality.MULTIPLE, //
 			target = "(enabled=true)")
 	private volatile List<ControllerEssLimitTotalDischarge> ctrlLimitTotalDischarges = new CopyOnWriteArrayList<>();
+
+	@Reference(policy = ReferencePolicy.STATIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.OPTIONAL)
+	private ElectricityMeter meter;
 
 	public SolarEdgeHybridEssImpl() throws OpenemsException {
 		super(//
@@ -180,6 +178,11 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 			return;
 		}
 		this.config = config;
+
+		// update filter for 'meter'
+		if (OpenemsComponent.updateReferenceFilter(this.cm, this.servicePid(), "meter", config.meter_id())) {
+			return;
+		}
 
 		this.installListener();
 	}
@@ -225,10 +228,9 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		return true;
 
 		// Just for Testing
-		//return !this.config.readOnlyMode();
+		// return !this.config.readOnlyMode();
 	}
-	
-	
+
 	@Override
 	public Timedata getTimedata() {
 		return this.timedata;
@@ -250,27 +252,37 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	}
 
 	@Override
-	public void applyPower(int activePowerWanted, int reactivePowerWanted) throws OpenemsNamedException {
+	public void applyPower(int activePowerTarget, int reactivePowerWanted) throws OpenemsNamedException {
 
 		Integer surplusPower = this.getSurplusPower(); // is NULL if battery´s not fully charged yet
 		// Integer gridPower = this.getGridPower().get();
 		// Integer dcChargePower = this.getChargePower().get();
+		this.logDebug(this.log, "ApplyPower Target: " + activePowerTarget + "W");
+		if (surplusPower != null) {
+			this.logDebug(this.log, "ESS 	Surplus Power: " + surplusPower + "W");
+		}
 
-		// negative values are for charging
-		//if (surplusPower != null && surplusPower > Math.abs(activePowerWanted)) { // Battery is charged. We have to
-		//																			// limit
-		if (surplusPower != null && surplusPower > config.FeedToGridPowerLimit()) {
-			// PV-production
-			int powerPerCharger = (int) Math.round(Math.abs(activePowerWanted) / this.chargers.size());
+		// Get the grid power and ess power
+		int gridPower = this.meter.getActivePower().getOrError(); /* current buy-from/sell-to grid */
+
+		// Checking if the grid power is above the maximum feed-in
+		if (gridPower * -1 > this.config.feedToGridPowerLimit()) {
+
+			// Calculate actual limit for Ess
+			var essPowerLimit = gridPower + this.getActivePower().getOrError() + this.config.feedToGridPowerLimit();
+			this.logDebug(this.log, "Ess power limit: " + essPowerLimit + "W");
+
+			// Apply limit
+			int powerPerCharger = (int) Math.round(Math.abs(essPowerLimit) / this.chargers.size());
 			for (SolaredgeDcCharger charger : this.chargers) {
 				charger._calculateAndSetPvPowerLimit(powerPerCharger);
 				this.logDebug(this.log, "Limit per Charger Wanted: " + powerPerCharger + "W");
-				// not working yet
-				// charger._calculateAndSetPvPowerLimit(10000);
+
 			}
+
 		}
 
-		this.applyChargePower(activePowerWanted);
+		this.applyChargePower(activePowerTarget);
 
 	}
 
@@ -332,7 +344,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		return controlMode == ControlMode.SE_CTRL_MODE_REMOTE;
 
 	}
-	
+
 	/**
 	 * Internal mode from SolarEdge
 	 */
@@ -343,39 +355,37 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		return acChargePolicy == AcChargePolicy.SE_CHARGE_DISCHARGE_MODE_ALWAYS;
 	}
 
-
-
 	/**
 	 * SolarEdge provides max. usable Capacity. So we can calculate current useable
 	 * capacity
 	 */
 	private void installListener() {
-	    this.getCapacityChannel().onUpdate(value -> {
-	        this.checkSocControllers();
-	        Integer soc = this.getSoc().get();
-	        int minSocPercentage = this.minSocPercentage;
+		this.getCapacityChannel().onUpdate(value -> {
+			this.checkSocControllers();
+			Integer soc = this.getSoc().get();
+			int minSocPercentage = this.minSocPercentage;
 
-	        if (soc == null) {
-	            return;
-	        }
+			if (soc == null) {
+				return;
+			}
 
-	        if (soc < minSocPercentage) {
-	            this._setUseableCapacity(0);
-	        } else {
-	            soc = soc - minSocPercentage;
-	            // Normalize the soc to a 0-100% range over the range (100 - minSocPercentage)
-	            float normalizedSoc = (float) soc / (100 - minSocPercentage) * 100;
-	            // Calculate useable capacity based on normalized SoC
-	            int useableCapacity = (int) Math.round((float) value.get() * (normalizedSoc / 100f));
-	            this._setUseableCapacity(useableCapacity);
-	            this._setUseableSoc((int) normalizedSoc);
-	        }
+			if (soc < minSocPercentage) {
+				this._setUseableCapacity(0);
+			} else {
+				soc = soc - minSocPercentage;
+				// Normalize the soc to a 0-100% range over the range (100 - minSocPercentage)
+				float normalizedSoc = (float) soc / (100 - minSocPercentage) * 100;
+				// Calculate useable capacity based on normalized SoC
+				int useableCapacity = (int) Math.round((float) value.get() * (normalizedSoc / 100f));
+				this._setUseableCapacity(useableCapacity);
+				this._setUseableSoc((int) normalizedSoc);
+			}
 
-	        if (soc <= 0) {
-	            this._setUseableCapacity(0);
-	            this._setUseableSoc(0);
-	        }
-	    });
+			if (soc <= 0) {
+				this._setUseableCapacity(0);
+				this._setUseableSoc(0);
+			}
+		});
 	}
 
 	private void checkSocControllers() {
@@ -464,7 +474,6 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 
 	}
 
-
 	/**
 	 * Calculate the Energy values from DcDischargePower. This should be the
 	 * charging power from or to battery.
@@ -541,7 +550,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	@Override
 	public Integer getSurplusPower() {
 		// TODO logic is insufficient
-		if (this.getSoc().orElse(0) < 99) {
+		if (this.getSoc().orElse(0) < 98) { // SolarEdge holds on 98% a long time
 			return null;
 		}
 		var productionPower = this.getPvProductionPower();
@@ -577,8 +586,6 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		return pvProductionPower;
 	}
 
-
-
 	private void configureChargeDischargeModes() throws OpenemsNamedException {
 		if (!isControlModeRemote() || !isStorageChargePolicyAlways()) {
 			this._setChargeDischargeDefaultMode(ChargeDischargeMode.SE_CHARGE_POLICY_MAX_SELF_CONSUMPTION);
@@ -589,16 +596,16 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 
 	private int determineMaxDischargePower() {
 		int maxDischargePower = getMaxDischargeContinuesPower().orElse(0);
-		if (config.DischargePowerLimit() < maxDischargePower) {
-			return config.DischargePowerLimit();
+		if (config.dischargePowerLimit() < maxDischargePower) {
+			return config.dischargePowerLimit();
 		}
 		return maxDischargePower;
 	}
 
 	private int determineMaxChargePower() {
 		int maxChargePower = getMaxChargeContinuesPower().orElse(0) * -1;
-		if ((config.ChargePowerLimit() * -1) > maxChargePower) {
-			return (config.ChargePowerLimit() * -1);
+		if ((config.chargePowerLimit() * -1) > maxChargePower) {
+			return (config.chargePowerLimit() * -1);
 		}
 		return maxChargePower;
 	}

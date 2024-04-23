@@ -55,7 +55,7 @@ import io.openems.edge.timedata.api.utils.CalculateEnergyFromPower;
 
 @Designate(ocd = Config.class, factory = true)
 @Component(//
-		name = "io.openems.edge.solaredge.charger", //
+		name = "SolarEdge.Hybrid.DcCharger", //
 		immediate = true, //
 		configurationPolicy = ConfigurationPolicy.REQUIRE //
 
@@ -409,7 +409,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 		Integer currentPercent = this.getActivePvPowerLimitPercent().get(); // current PV production limit in percent
 
 		Integer currentPowerLimit = this.getActivePvActivePowerLimit().get(); // current PV production limit in watts
-		int tolerance = 5; // % tolerance to avoid unnecessary updates
+		int tolerance = 2; // % tolerance to avoid unnecessary updates
 		this.logDebug(this.log, "Limit Wanted: " + maxPvPower + "W");
 
 
