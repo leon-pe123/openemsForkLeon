@@ -1286,6 +1286,7 @@ public interface SolarEdgeHybridEss extends OpenemsComponent {
 	public default ModbusSlaveNatureTable getModbusSlaveNatureTable(AccessMode accessMode) {
 		return ModbusSlaveNatureTable.of(SolarEdgeHybridEss.class, accessMode, 100) //
 				.channel(0, ChannelId.USEABLE_CAPACITY, ModbusType.UINT16) //
+				.channel(1, ChannelId.USEABLE_SOC, ModbusType.UINT16) //
 
 				.build();
 	}

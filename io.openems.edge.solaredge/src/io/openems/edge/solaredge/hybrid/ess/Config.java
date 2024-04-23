@@ -35,11 +35,14 @@ import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 	@AttributeDefinition(name = "Read-Only mode", description = "Enables Read-Only mode")
 	boolean readOnlyMode() default true;	
 	
-	@AttributeDefinition(name = "Charge Power Limit", description = "limits the maximum charge power")
+	@AttributeDefinition(name = "Charge Power Limit", description = "Limits the maximum charge power")
 	int ChargePowerLimit() default 5000;
 	
-	@AttributeDefinition(name = "Discharge Power Limit", description = "limits the maximum discharge power")
+	@AttributeDefinition(name = "Discharge Power Limit", description = "Limits the maximum discharge power")
 	int DischargePowerLimit() default 5000;
+	
+	@AttributeDefinition(name = "Feed-to-grid Power Limit", description = "Limits PV-production if limit exceeds ")
+	int FeedToGridPowerLimit() default 10000;	
 	
 	String webconsole_configurationFactory_nameHint() default "SolarEdge Hybrid Inverter System [{id}]";
 }

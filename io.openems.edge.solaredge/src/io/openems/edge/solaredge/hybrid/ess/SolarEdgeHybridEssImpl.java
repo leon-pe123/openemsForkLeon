@@ -185,6 +185,51 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	}
 
 	@Override
+	@Deactivate
+	protected void deactivate() {
+		super.deactivate();
+	}
+
+	@Override
+	public void handleEvent(Event event) {
+		// super.handleEvent(event);
+
+		switch (event.getTopic()) {
+		case EdgeEventConstants.TOPIC_CYCLE_EXECUTE_WRITE:
+			this._setMyActivePower();
+			break;
+		case EdgeEventConstants.TOPIC_CYCLE_BEFORE_CONTROLLERS:
+			this._setMyActivePower();
+			this.setLimits();
+			break;
+		case EdgeEventConstants.TOPIC_CYCLE_AFTER_PROCESS_IMAGE:
+			this._setMyActivePower();
+			this.calculateEnergy();
+			break;
+		}
+	}
+
+	@Override
+	public Power getPower() {
+		return this.power;
+	}
+
+	@Override
+	public int getPowerPrecision() {
+		//
+		return 1;
+	}
+
+	@Override
+	public boolean isManaged() {
+		return true;
+
+		// Just for Testing
+		//return !this.config.readOnlyMode();
+	}
+	
+	
+	@Override
 	public Timedata getTimedata() {
 		return this.timedata;
 	}
@@ -212,12 +257,13 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		// Integer dcChargePower = this.getChargePower().get();
 
 		// negative values are for charging
-		if (surplusPower != null && surplusPower > Math.abs(activePowerWanted)) { // Battery is charged. We have to
-																					// limit
+		//if (surplusPower != null && surplusPower > Math.abs(activePowerWanted)) { // Battery is charged. We have to
+		//																			// limit
+		if (surplusPower != null && surplusPower > config.FeedToGridPowerLimit()) {
 			// PV-production
 			int powerPerCharger = (int) Math.round(Math.abs(activePowerWanted) / this.chargers.size());
 			for (SolaredgeDcCharger charger : this.chargers) {
-				// charger._calculateAndSetPvPowerLimit(powerPerCharger);
+				charger._calculateAndSetPvPowerLimit(powerPerCharger);
 				this.logDebug(this.log, "Limit per Charger Wanted: " + powerPerCharger + "W");
 				// not working yet
 				// charger._calculateAndSetPvPowerLimit(10000);
@@ -286,7 +332,10 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		return controlMode == ControlMode.SE_CTRL_MODE_REMOTE;
 
 	}
-
+	
+	/**
+	 * Internal mode from SolarEdge
+	 */
 	private boolean isStorageChargePolicyAlways() {
 		EnumReadChannel acChargePolicyChannel = this.channel(SolarEdgeHybridEss.ChannelId.AC_CHARGE_POLICY);
 		AcChargePolicy acChargePolicy = acChargePolicyChannel.value().asEnum();
@@ -301,32 +350,32 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	 * capacity
 	 */
 	private void installListener() {
-		this.getCapacityChannel().onUpdate(value -> {
-			this.checkSocControllers();
-			Integer soc = this.getSoc().get();
-			int minSocPercentage = this.minSocPercentage;
+	    this.getCapacityChannel().onUpdate(value -> {
+	        this.checkSocControllers();
+	        Integer soc = this.getSoc().get();
+	        int minSocPercentage = this.minSocPercentage;
 
-			if (soc == null) {
-				return;
-			}
+	        if (soc == null) {
+	            return;
+	        }
 
-			if (soc < minSocPercentage) {
-				this._setUseableCapacity(0);
-			} else {
-				soc = soc - minSocPercentage;
-			}
+	        if (soc < minSocPercentage) {
+	            this._setUseableCapacity(0);
+	        } else {
+	            soc = soc - minSocPercentage;
+	            // Normalize the soc to a 0-100% range over the range (100 - minSocPercentage)
+	            float normalizedSoc = (float) soc / (100 - minSocPercentage) * 100;
+	            // Calculate useable capacity based on normalized SoC
+	            int useableCapacity = (int) Math.round((float) value.get() * (normalizedSoc / 100f));
+	            this._setUseableCapacity(useableCapacity);
+	            this._setUseableSoc((int) normalizedSoc);
+	        }
 
-			if (soc > 0) {
-				int useableCapacity = (int) Math.round((float) value.get() * (soc / 100f));
-				this._setUseableCapacity(useableCapacity);
-				this._setUseableSoc(soc);
-
-			} else {
-				this._setUseableCapacity(0);
-			}
-
-		});
-
+	        if (soc <= 0) {
+	            this._setUseableCapacity(0);
+	            this._setUseableSoc(0);
+	        }
+	    });
 	}
 
 	private void checkSocControllers() {
@@ -415,49 +464,6 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 
 	}
 
-	@Override
-	@Deactivate
-	protected void deactivate() {
-		super.deactivate();
-	}
-
-	@Override
-	public void handleEvent(Event event) {
-		// super.handleEvent(event);
-
-		switch (event.getTopic()) {
-		case EdgeEventConstants.TOPIC_CYCLE_EXECUTE_WRITE:
-			this._setMyActivePower();
-			break;
-		case EdgeEventConstants.TOPIC_CYCLE_BEFORE_CONTROLLERS:
-			this._setMyActivePower();
-			this.setLimits();
-			break;
-		case EdgeEventConstants.TOPIC_CYCLE_AFTER_PROCESS_IMAGE:
-			this._setMyActivePower();
-			this.calculateEnergy();
-			break;
-		}
-	}
-
-	@Override
-	public Power getPower() {
-		return this.power;
-	}
-
-	@Override
-	public int getPowerPrecision() {
-		//
-		return 1;
-	}
-
-	@Override
-	public boolean isManaged() {
-		// return true;
-
-		// Just for Testing
-		return !this.config.readOnlyMode();
-	}
 
 	/**
 	 * Calculate the Energy values from DcDischargePower. This should be the
@@ -571,15 +577,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		return pvProductionPower;
 	}
 
-	/**
-	 * Uses Info Log for further debug features.
-	 */
-	@Override
-	protected void logDebug(Logger log, String message) {
-		if (this.config.debugMode()) {
-			this.logInfo(this.log, message);
-		}
-	}
+
 
 	private void configureChargeDischargeModes() throws OpenemsNamedException {
 		if (!isControlModeRemote() || !isStorageChargePolicyAlways()) {
@@ -821,6 +819,16 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		} else
 			return "SoC:" + this.getSoc().asString() //
 					+ "|L:" + this.getActivePower().asString();
+	}
+
+	/**
+	 * Uses Info Log for further debug features.
+	 */
+	@Override
+	protected void logDebug(Logger log, String message) {
+		if (this.config.debugMode()) {
+			this.logInfo(this.log, message);
+		}
 	}
 
 }

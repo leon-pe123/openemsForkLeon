@@ -401,8 +401,8 @@ public class VictronEssImpl extends AbstractOpenemsModbusComponent implements Vi
 			this.calculateEnergy();
 			break;
 		case EdgeEventConstants.TOPIC_CYCLE_BEFORE_CONTROLLERS:
-			// this._setMyActivePower();
-			// this.calculateEnergy();
+			this._setMyActivePower();
+			this.calculateEnergy();
 			// this.checkSocControllers();
 			break;
 

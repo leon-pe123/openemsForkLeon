@@ -121,6 +121,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 		if (this.ess != null) {
 			this.ess.addCharger(this);
 		}
+		this.setInitalPvLimit();
 
 	}
 
@@ -373,6 +374,30 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 			return;
 		}
 	}
+	
+	private void setInitalPvLimit () {
+
+		int newLimitPercent = 100;
+		// Activate control mode if it's not already active
+		if (this.getSetPvPowerControlMode() != ActiveInactive.ACTIVE) {
+			try {
+				this.setPvPowerControlMode(ActiveInactive.ACTIVE);
+			} catch (OpenemsNamedException e) {
+				this.logDebug(this.log, "Failed to set Control Mode to ACTIVE: " + e.getMessage());
+				return; // Stop further execution if control mode activation fails
+			}
+		}
+
+		// Attempt to set the new power limit percentage and commit changes
+		try {
+			this.setPvPowerLimitPercent(newLimitPercent);
+			this.commitPvPowerLimit(1); // Send '1' to commit changes
+			this.logDebug(this.log, "New Power Limit set to: " + newLimitPercent + "%");
+		} catch (OpenemsNamedException e) {
+			this.logDebug(this.log, "Failed to set PV Limit in percent: " + e.getMessage());
+		}
+
+	}
 
 	/**
 	 * Sets Limits for PV-Production. The limitation refers to AC-side
@@ -380,15 +405,13 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 	 */
 	@Override
 	public void _calculateAndSetPvPowerLimit(int maxPvPower) {
-		Integer currentPercent = this.getActivePvPowerLimitPercent().get();
-		Integer maxActivePowerLimit = this.getMaxActivePvPowerLimit().get();
-		Integer currentPowerLimit = this.getActivePvActivePowerLimit().get();
-		
-		this.logDebug(this.log,
-				"Limit Wanted: " + maxPvPower + "W");		
-		
-		// Configured PV limit is assumed to be the new power limit value in watts
-		int pvLimit = config.pvLimit(); // configured limit
+		Integer maxActivePowerLimit = this.getMaxActivePvPowerLimit().get(); // max. hardware PV production power
+		Integer currentPercent = this.getActivePvPowerLimitPercent().get(); // current PV production limit in percent
+
+		Integer currentPowerLimit = this.getActivePvActivePowerLimit().get(); // current PV production limit in watts
+		int tolerance = 5; // % tolerance to avoid unnecessary updates
+		this.logDebug(this.log, "Limit Wanted: " + maxPvPower + "W");
+
 
 		// Validate non-null and non-zero conditions to prevent calculation errors
 		if (currentPowerLimit == null || currentPowerLimit == 0 || maxActivePowerLimit == null
@@ -396,14 +419,13 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 			this.logDebug(this.log, "CurrentPowerLimit or MaxActivePowerLimit is NULL or 0");
 			return; // Early exit to prevent further processing
 		}
-		
-		this.logDebug(this.log,
-				"Current PV Limit: " + maxActivePowerLimit + "W");		
 
-				
+		int pvLimit = maxActivePowerLimit;
+
+		this.logDebug(this.log, "Current PV Limit: " + maxActivePowerLimit + "W");
+
 		
-		int tolerance = 5; // % tolerance to avoid unnecessary updates
-		if (maxPvPower < pvLimit) {
+		if (maxPvPower < maxActivePowerLimit) {
 			pvLimit = maxPvPower;
 		}
 
@@ -477,11 +499,11 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 			break;
 		case EdgeEventConstants.TOPIC_CYCLE_BEFORE_CONTROLLERS:
 			this._calculateAndSetActualPower();
-			//this._calculateAndSetPvPowerLimit(); called from ESS
+			// this._calculateAndSetPvPowerLimit(); called from ESS
 			break;
 		case EdgeEventConstants.TOPIC_CYCLE_AFTER_PROCESS_IMAGE:
 			this._calculateAndSetActualPower();
-			//this._calculateAndSetPvPowerLimit(); called from ESS
+			// this._calculateAndSetPvPowerLimit(); called from ESS
 			break;
 		}
 	}
