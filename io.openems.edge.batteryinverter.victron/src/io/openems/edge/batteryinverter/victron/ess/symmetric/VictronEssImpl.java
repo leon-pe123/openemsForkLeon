@@ -294,7 +294,7 @@ public class VictronEssImpl extends AbstractOpenemsModbusComponent implements Vi
 
 	//
 	@Override
-	public void applyPower(int activePower, int reactivePower) throws OpenemsNamedException {
+	public void applyPower(int activePowerTarget, int reactivePower) throws OpenemsNamedException {
 
 		if (this.config.phase() != Phase.ALL) {
 			return;
@@ -314,7 +314,8 @@ public class VictronEssImpl extends AbstractOpenemsModbusComponent implements Vi
 		if (this.batteryInverter.calculateHardwareLimits() == false) {
 			return;
 		}
-
+		this.logDebug(this.log, "ApplyPower Target: " + activePowerTarget + "W");
+		
 		if (this.batteryInverter.getMaxApparentPower().get() == null
 				|| this.batteryInverter.getMaxApparentPower().get() == 0) {
 			this.logError(this.log, "ApplyPower->Max. Apparent Power invalid");
@@ -330,14 +331,14 @@ public class VictronEssImpl extends AbstractOpenemsModbusComponent implements Vi
 			return;
 		}
 
-		this.logDebug(this.log, "Symm. PowerWanted: " + activePower);
+		this.logDebug(this.log, "Symm. PowerWanted: " + activePowerTarget);
 
 		// Check if desired Power value is within limits
-		if (activePower < 0 && Math.abs(activePower) > MaxChargePower) {
-			activePower = MaxChargePower * -1;
+		if (activePowerTarget < 0 && Math.abs(activePowerTarget) > MaxChargePower) {
+			activePowerTarget = MaxChargePower * -1;
 		}
-		if (activePower > 0 && activePower > MaxDischargePower) {
-			activePower = MaxDischargePower;
+		if (activePowerTarget > 0 && activePowerTarget > MaxDischargePower) {
+			activePowerTarget = MaxDischargePower;
 		}
 
 		this._setAllowedChargePower(MaxChargePower * -1); // Negative for charging
@@ -349,7 +350,7 @@ public class VictronEssImpl extends AbstractOpenemsModbusComponent implements Vi
 			return;
 		}
 
-		this.batteryInverter.run(battery, activePower, reactivePower);
+		this.batteryInverter.run(battery, activePowerTarget, reactivePower);
 
 	}
 
