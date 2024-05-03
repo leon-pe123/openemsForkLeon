@@ -69,7 +69,7 @@ public class SolarEdgeGridMeterImpl extends AbstractSolarEdgeGridmeter implement
 
 	private Config config;
 
-	public SolarEdgeGridMeterImpl() {
+	public SolarEdgeGridMeterImpl() throws OpenemsException {
 		super(//
 				ACTIVE_MODELS, //
 				OpenemsComponent.ChannelId.values(), //
@@ -79,7 +79,7 @@ public class SolarEdgeGridMeterImpl extends AbstractSolarEdgeGridmeter implement
 				this.addStaticModbusTasks(this.getModbusProtocol());
 	}
 
-	private void addStaticModbusTasks(ModbusProtocol protocol) throws OpenemsException {
+	private void addStaticModbusTasks(ModbusProtocol protocol)  {
 		protocol.addTask(//
 				new FC3ReadRegistersTask(0x9D0E, Priority.HIGH, //
 

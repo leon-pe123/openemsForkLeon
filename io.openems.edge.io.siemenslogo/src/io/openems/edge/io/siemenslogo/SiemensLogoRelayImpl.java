@@ -68,7 +68,7 @@ public class SiemensLogoRelayImpl extends AbstractSiemensLogoRelay
 	}
 
 	@Override
-	protected ModbusProtocol defineModbusProtocol() throws OpenemsException {
+	protected ModbusProtocol defineModbusProtocol() {
 
 		this.readOffset = this.config.modbusOffsetReadAddress();
 		

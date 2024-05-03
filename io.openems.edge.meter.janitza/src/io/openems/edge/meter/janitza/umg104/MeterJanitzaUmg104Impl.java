@@ -95,7 +95,7 @@ public class MeterJanitzaUmg104Impl extends AbstractOpenemsModbusComponent
 	}
 
 	@Override
-	protected ModbusProtocol defineModbusProtocol() throws OpenemsException {
+	protected ModbusProtocol defineModbusProtocol() {
 		/*
 		 * We are using the FLOAT registers from the modbus table, because they are all
 		 * reachable within one ReadMultipleRegistersRequest.

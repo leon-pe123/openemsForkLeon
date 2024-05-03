@@ -56,11 +56,12 @@ import io.openems.edge.pvinverter.sunspec.SunSpecPvInverter;
 @EventTopics({ //
 		EdgeEventConstants.TOPIC_CYCLE_EXECUTE_WRITE //
 })
-public class SolarEdgePvInverterImpl extends AbstractSunSpecPvInverter implements SunSpecPvInverter, ManagedSymmetricPvInverter,
-		 ElectricityMeter, OpenemsComponent, EventHandler, ModbusSlave, SolarEdgePvinverterChannelId 		{
-	
+public class SolarEdgePvInverterImpl extends AbstractSunSpecPvInverter
+		implements SunSpecPvInverter, ManagedSymmetricPvInverter, ElectricityMeter, OpenemsComponent, EventHandler,
+		ModbusSlave, SolarEdgePvinverterChannelId {
+
 	private Config config;
-	
+
 	private static final int READ_FROM_MODBUS_BLOCK = 1;
 
 	private static final Map<SunSpecModel, Priority> ACTIVE_MODELS = ImmutableMap.<SunSpecModel, Priority>builder()
@@ -84,21 +85,18 @@ public class SolarEdgePvInverterImpl extends AbstractSunSpecPvInverter implement
 	@Reference
 	protected ConfigurationAdmin cm;
 
-	public SolarEdgePvInverterImpl() {
+	public SolarEdgePvInverterImpl() throws OpenemsException {
 		super(//
 				ACTIVE_MODELS, //
 				OpenemsComponent.ChannelId.values(), //
 				ModbusComponent.ChannelId.values(), //
 				ElectricityMeter.ChannelId.values(), //
 				ManagedSymmetricPvInverter.ChannelId.values(), //
-				SunSpecPvInverter.ChannelId.values(),				
-				SolarEdgePvinverterChannelId.ChannelId.values()
-		);
-		
-		
-			addStaticModbusTasksDcPower(this.getModbusProtocol());
-			addStaticModbusTasksGridPower(this.getModbusProtocol());
-		
+				SunSpecPvInverter.ChannelId.values(), SolarEdgePvinverterChannelId.ChannelId.values());
+
+		addStaticModbusTasksDcPower(this.getModbusProtocol());
+		addStaticModbusTasksGridPower(this.getModbusProtocol());
+
 	}
 
 	@Override
@@ -107,7 +105,6 @@ public class SolarEdgePvInverterImpl extends AbstractSunSpecPvInverter implement
 		super.setModbus(modbus);
 	}
 
-	
 	@Activate
 	void activate(ComponentContext context, Config config) throws OpenemsException {
 		if (super.activate(context, config.id(), config.alias(), config.enabled(), config.modbusUnitId(), this.cm,
@@ -115,9 +112,9 @@ public class SolarEdgePvInverterImpl extends AbstractSunSpecPvInverter implement
 			return;
 		}
 		this.config = config;
-		
+
 	}
-	
+
 	/**
 	 * Adds static modbus tasks.
 	 * 
@@ -128,54 +125,68 @@ public class SolarEdgePvInverterImpl extends AbstractSunSpecPvInverter implement
 
 		protocol.addTask(//
 				new FC3ReadRegistersTask(0xE174, Priority.LOW, //
-						m(SolarEdgePvinverterChannelId.ChannelId.DC_DISCHARGE_POWER, new FloatDoublewordElement(0xE174).wordOrder(WordOrder.LSWMSW),
-								ElementToChannelConverter.INVERT)) //	
-				);
-	    
+						m(SolarEdgePvinverterChannelId.ChannelId.DC_DISCHARGE_POWER,
+								new FloatDoublewordElement(0xE174).wordOrder(WordOrder.LSWMSW),
+								ElementToChannelConverter.INVERT)) //
+		);
+
 	}
-	
+
 	private void addStaticModbusTasksGridPower(ModbusProtocol protocol) throws OpenemsException {
 
 		protocol.addTask(//
 				new FC3ReadRegistersTask(0x9d0e, Priority.LOW, //
-						m(SolarEdgePvinverterChannelId.ChannelId.GRID_POWER,new SignedWordElement(0x9d0e)),
-						new DummyRegisterElement(0x9d0f, 0x9d11),						
-						m(SolarEdgePvinverterChannelId.ChannelId.GRID_POWER_SCALE,new SignedWordElement(0x9d12)))
-				);
-	    
-	}	
-	
-	
+						m(SolarEdgePvinverterChannelId.ChannelId.GRID_POWER, new SignedWordElement(0x9d0e)),
+						new DummyRegisterElement(0x9d0f, 0x9d11),
+						m(SolarEdgePvinverterChannelId.ChannelId.GRID_POWER_SCALE, new SignedWordElement(0x9d12))));
+
+	}
+
 	public void _setMyActivePower() {
-		
-		// Aktuelle Erzeugung durch den Hybrid-WR ist der aktuelle Verbrauch + Batterie-Ladung/Entladung *-1
-		// Actual power from inverter comes from house consumption + battery inverter power (*-1)
+
+		// Aktuelle Erzeugung durch den Hybrid-WR ist der aktuelle Verbrauch +
+		// Batterie-Ladung/Entladung *-1
+		// Actual power from inverter comes from house consumption + battery inverter
+		// power (*-1)
 		try {
-		int production_power 	= this.getProductionPowerChannel().value().get(); // Leistung Inverter
-		//int consumption_power 	= this.getConsumptionPowerChannel().value().get(); // Leistung Haus <- Unsinn!
-		int battery_power 		= this.getDcDischargePowerChannel().value().get() * -1; // DC-Discharge 0xe172: negative while Charging, so we have to negate
-		double grid_power_scale	= this.getGridPowerScaleChannel().value().get();
-		int grid_power 			= this.getGridPowerChannel().value().get() * (int) Math.pow(10, grid_power_scale); // postive while buying from grid
-		grid_power				= grid_power * -1;
-		
-		// If Grid-Power is negative then the actual PV production is the Consumption Power (AC Power from inverter which is SunSpec 103W, Modbus 0x9c93)
-		// If Grid-Power is positive the PV production is the sum from consumption power + battery-power (positive while charging) + grid-power (negative while consuming)
-		
-		int value				= 0;
-		if (grid_power < 0 && battery_power  == 0)  value  = production_power ;
-		else  value				= production_power + battery_power - grid_power;
-		
-		if (value < 0) value =0; // Negative Values are not allowed for PV production
-		
-		this._setActivePower(value);
-		}
-		catch (Exception e){
+			int production_power = this.getProductionPowerChannel().value().get(); // Leistung Inverter
+			// int consumption_power = this.getConsumptionPowerChannel().value().get(); //
+			// Leistung Haus <- Unsinn!
+			int battery_power = this.getDcDischargePowerChannel().value().get() * -1; // DC-Discharge 0xe172: negative
+																						// while Charging, so we have to
+																						// negate
+			double grid_power_scale = this.getGridPowerScaleChannel().value().get();
+			int grid_power = this.getGridPowerChannel().value().get() * (int) Math.pow(10, grid_power_scale); // postive
+																												// while
+																												// buying
+																												// from
+																												// grid
+			grid_power = grid_power * -1;
+
+			// If Grid-Power is negative then the actual PV production is the Consumption
+			// Power (AC Power from inverter which is SunSpec 103W, Modbus 0x9c93)
+			// If Grid-Power is positive the PV production is the sum from consumption power
+			// + battery-power (positive while charging) + grid-power (negative while
+			// consuming)
+
+			int value = 0;
+			if (grid_power < 0 && battery_power == 0)
+				value = production_power;
+			else
+				value = production_power + battery_power - grid_power;
+
+			if (value < 0)
+				value = 0; // Negative Values are not allowed for PV production
+
+			this._setActivePower(value);
+		} catch (Exception e) {
 			return;
 		}
-	
-	}	
-	
-	// Method seems only to be called once. Either here or in AbstractSunSpecInverter
+
+	}
+
+	// Method seems only to be called once. Either here or in
+	// AbstractSunSpecInverter
 	// So we call it here to have full control over channels
 	@Override
 	protected void onSunSpecInitializationCompleted() {
@@ -186,28 +197,23 @@ public class SolarEdgePvInverterImpl extends AbstractSunSpecPvInverter implement
 		// SymmetricEss.ChannelId.ACTIVE_POWER, //
 		// ElementToChannelConverter.DIRECT_1_TO_1, //
 		// DefaultSunSpecModel.S103.W);
-	
+
 		// CONSUMPTION_POWER takes Power from Inverter
 		// We have to build ACTIVE_POWER for inverter afterwards
 
-
-		if (config.hybrid() == true ) // ACTIVE_POWER channel needs to be calculated
+		if (config.hybrid() == true) // ACTIVE_POWER channel needs to be calculated
 		{
 			this.mapFirstPointToChannel(//
-			SolarEdgePvinverterChannelId.ChannelId.PRODUCTION_POWER, //
-			ElementToChannelConverter.DIRECT_1_TO_1, //
-			DefaultSunSpecModel.S103.W);	
-		}
-		else 
-		{
+					SolarEdgePvinverterChannelId.ChannelId.PRODUCTION_POWER, //
+					ElementToChannelConverter.DIRECT_1_TO_1, //
+					DefaultSunSpecModel.S103.W);
+		} else {
 			this.mapFirstPointToChannel(//
-			ElectricityMeter.ChannelId.ACTIVE_POWER, //
-			ElementToChannelConverter.DIRECT_1_TO_1, //
-			DefaultSunSpecModel.S111.W, DefaultSunSpecModel.S112.W, DefaultSunSpecModel.S113.W,
-			DefaultSunSpecModel.S101.W, DefaultSunSpecModel.S102.W, DefaultSunSpecModel.S103.W);
+					ElectricityMeter.ChannelId.ACTIVE_POWER, //
+					ElementToChannelConverter.DIRECT_1_TO_1, //
+					DefaultSunSpecModel.S111.W, DefaultSunSpecModel.S112.W, DefaultSunSpecModel.S113.W,
+					DefaultSunSpecModel.S101.W, DefaultSunSpecModel.S102.W, DefaultSunSpecModel.S103.W);
 		}
-
-
 
 		this.mapFirstPointToChannel(//
 				ElectricityMeter.ChannelId.FREQUENCY, //
@@ -215,14 +221,13 @@ public class SolarEdgePvInverterImpl extends AbstractSunSpecPvInverter implement
 				DefaultSunSpecModel.S111.HZ, DefaultSunSpecModel.S112.HZ, DefaultSunSpecModel.S113.HZ,
 				DefaultSunSpecModel.S101.HZ, DefaultSunSpecModel.S102.HZ, DefaultSunSpecModel.S103.HZ);
 
-
 		/*
-		this.mapFirstPointToChannel(//
-				SymmetricMeter.ChannelId.ACTIVE_POWER_SCALE, //
-				ElementToChannelConverter.DIRECT_1_TO_1, //
-				DefaultSunSpecModel.S111.W, DefaultSunSpecModel.S112.W, DefaultSunSpecModel.S113.W,
-				DefaultSunSpecModel.S101.W, DefaultSunSpecModel.S102.W, DefaultSunSpecModel.S103.W);		
-*/
+		 * this.mapFirstPointToChannel(// SymmetricMeter.ChannelId.ACTIVE_POWER_SCALE,
+		 * // ElementToChannelConverter.DIRECT_1_TO_1, // DefaultSunSpecModel.S111.W,
+		 * DefaultSunSpecModel.S112.W, DefaultSunSpecModel.S113.W,
+		 * DefaultSunSpecModel.S101.W, DefaultSunSpecModel.S102.W,
+		 * DefaultSunSpecModel.S103.W);
+		 */
 		this.mapFirstPointToChannel(//
 				ElectricityMeter.ChannelId.REACTIVE_POWER, //
 				ElementToChannelConverter.DIRECT_1_TO_1, //
@@ -249,42 +254,33 @@ public class SolarEdgePvInverterImpl extends AbstractSunSpecPvInverter implement
 		this.mapFirstPointToChannel(//
 				ElectricityMeter.ChannelId.VOLTAGE, //
 				ElementToChannelConverter.SCALE_FACTOR_3, //
-				DefaultSunSpecModel.S112.PH_VPH_A, DefaultSunSpecModel.S112.PH_VPH_B,
-				DefaultSunSpecModel.S112.PH_VPH_C, //
-				DefaultSunSpecModel.S113.PH_VPH_A, DefaultSunSpecModel.S113.PH_VPH_B,
-				DefaultSunSpecModel.S113.PH_VPH_C, //
-				DefaultSunSpecModel.S102.PH_VPH_A, DefaultSunSpecModel.S102.PH_VPH_B,
-				DefaultSunSpecModel.S102.PH_VPH_C, //
+				DefaultSunSpecModel.S112.PH_VPH_A, DefaultSunSpecModel.S112.PH_VPH_B, DefaultSunSpecModel.S112.PH_VPH_C, //
+				DefaultSunSpecModel.S113.PH_VPH_A, DefaultSunSpecModel.S113.PH_VPH_B, DefaultSunSpecModel.S113.PH_VPH_C, //
+				DefaultSunSpecModel.S102.PH_VPH_A, DefaultSunSpecModel.S102.PH_VPH_B, DefaultSunSpecModel.S102.PH_VPH_C, //
 				DefaultSunSpecModel.S103.PH_VPH_A, DefaultSunSpecModel.S103.PH_VPH_B,
 				DefaultSunSpecModel.S103.PH_VPH_C);
 		return;
 
 	}
-	
-	
-	
 
 	@Override
 	@Deactivate
 	protected void deactivate() {
 		super.deactivate();
 	}
-	
 
 	@Override
 	public void handleEvent(Event event) {
 		super.handleEvent(event);
-		
-		if (config.hybrid() == true ) 
-		{
+
+		if (config.hybrid() == true) {
 			switch (event.getTopic()) {
 			case EdgeEventConstants.TOPIC_CYCLE_EXECUTE_WRITE:
 				this._setMyActivePower();
-				break;	
+				break;
 			}
 		}
-	}		
-
+	}
 
 	@Override
 	public ModbusSlaveTable getModbusSlaveTable(AccessMode accessMode) {

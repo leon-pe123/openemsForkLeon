@@ -495,7 +495,7 @@ public class VictronEssImpl extends AbstractOpenemsModbusComponent implements Vi
 	 */
 
 	@Override
-	protected ModbusProtocol defineModbusProtocol() throws OpenemsException {
+	protected ModbusProtocol defineModbusProtocol() {
 		return new ModbusProtocol(this, //
 				new FC3ReadRegistersTask(3, Priority.HIGH, //
 

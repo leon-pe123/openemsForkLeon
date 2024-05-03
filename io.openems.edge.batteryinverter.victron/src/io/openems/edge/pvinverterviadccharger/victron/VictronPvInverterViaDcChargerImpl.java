@@ -13,7 +13,6 @@ import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.osgi.service.metatype.annotations.Designate;
 
 import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
-import io.openems.common.exceptions.OpenemsException;
 import io.openems.edge.bridge.modbus.api.AbstractOpenemsModbusComponent;
 import io.openems.edge.bridge.modbus.api.BridgeModbus;
 import io.openems.edge.bridge.modbus.api.ElementToChannelConverter;
@@ -81,7 +80,7 @@ public class VictronPvInverterViaDcChargerImpl extends AbstractOpenemsModbusComp
     }
 
     @Override
-    protected ModbusProtocol defineModbusProtocol() throws OpenemsException {
+    protected ModbusProtocol defineModbusProtocol() {
 	return new ModbusProtocol(this, //
 		new FC3ReadRegistersTask(771, Priority.LOW,
 			this.m(VictronPvInverterViaDcCharger.ChannelId.BATTERY_VOLTAGE, new UnsignedWordElement(771),

@@ -18,7 +18,6 @@ import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.osgi.service.metatype.annotations.Designate;
 
 import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
-import io.openems.common.exceptions.OpenemsException;
 import io.openems.edge.bridge.modbus.api.AbstractOpenemsModbusComponent;
 import io.openems.edge.bridge.modbus.api.BridgeModbus;
 import io.openems.edge.bridge.modbus.api.ModbusComponent;
@@ -122,7 +121,7 @@ public class VictronMeterImpl extends AbstractOpenemsModbusComponent
 	}
 
 	@Override
-	protected ModbusProtocol defineModbusProtocol() throws OpenemsException {
+	protected ModbusProtocol defineModbusProtocol() {
 		return new ModbusProtocol(this, //
 				new FC3ReadRegistersTask(2600, Priority.HIGH,
 						this.m(ElectricityMeter.ChannelId.ACTIVE_POWER_L1, new SignedWordElement(2600)), //

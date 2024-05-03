@@ -81,7 +81,7 @@ public class VictronAcOutPowerMeterImpl extends AbstractOpenemsModbusComponent
 	}
 
 	@Override
-	protected ModbusProtocol defineModbusProtocol() throws OpenemsException {
+	protected ModbusProtocol defineModbusProtocol()  {
 
 		return new ModbusProtocol(this, //
 				new FC3ReadRegistersTask(23, Priority.HIGH, //

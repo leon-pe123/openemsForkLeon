@@ -84,7 +84,7 @@ public class MeterEmhImpl extends AbstractOpenemsModbusComponent
 	}
 
 	@Override
-	protected ModbusProtocol defineModbusProtocol() throws OpenemsException {
+	protected ModbusProtocol defineModbusProtocol()  {
 		ModbusProtocol modbusProtocol = new ModbusProtocol(this, //
 				new FC3ReadRegistersTask(8, Priority.HIGH, //
 						m(ElectricityMeter.ChannelId.ACTIVE_POWER_L1, new SignedDoublewordElement(8),

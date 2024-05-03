@@ -487,7 +487,7 @@ public class VictronBatteryInverterImpl extends AbstractOpenemsModbusComponent
 	}
 
 	@Override
-	protected ModbusProtocol defineModbusProtocol() throws OpenemsException {
+	protected ModbusProtocol defineModbusProtocol()  {
 		return new ModbusProtocol(this, //
 				new FC3ReadRegistersTask(800, Priority.HIGH, //
 						this.m(VictronBatteryInverter.ChannelId.SERIAL_NUMBER, new StringWordElement(800, 6)),

@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 
 import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
 import io.openems.common.channel.AccessMode;
-import io.openems.common.exceptions.OpenemsException;
 
 import io.openems.edge.battery.api.Battery;
 import io.openems.edge.batteryinverter.victron.ess.symmetric.VictronEss;
@@ -222,7 +221,7 @@ public class VictronCanBusBatteryImpl extends AbstractOpenemsModbusComponent
 	}
 
 	@Override
-	protected ModbusProtocol defineModbusProtocol() throws OpenemsException {
+	protected ModbusProtocol defineModbusProtocol() {
 		return new ModbusProtocol(this, //
 				new FC3ReadRegistersTask(259, Priority.HIGH,
 						this.m(Battery.ChannelId.VOLTAGE, new UnsignedWordElement(259),
