@@ -84,7 +84,7 @@ public class SolarEdgePvInverterImpl extends AbstractSunSpecPvInverter implement
 	@Reference
 	protected ConfigurationAdmin cm;
 
-	public SolarEdgePvInverterImpl() throws OpenemsException {
+	public SolarEdgePvInverterImpl() {
 		super(//
 				ACTIVE_MODELS, //
 				OpenemsComponent.ChannelId.values(), //

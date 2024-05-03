@@ -69,7 +69,7 @@ public class SolarEdgeGridMeterImpl extends AbstractSolarEdgeGridmeter implement
 
 	private Config config;
 
-	public SolarEdgeGridMeterImpl() throws OpenemsException {
+	public SolarEdgeGridMeterImpl() {
 		super(//
 				ACTIVE_MODELS, //
 				OpenemsComponent.ChannelId.values(), //
