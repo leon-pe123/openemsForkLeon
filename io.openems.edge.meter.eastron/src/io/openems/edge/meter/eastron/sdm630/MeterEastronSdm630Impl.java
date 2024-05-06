@@ -38,8 +38,6 @@ import io.openems.edge.common.modbusslave.ModbusSlaveTable;
 import io.openems.edge.common.taskmanager.Priority;
 import io.openems.edge.meter.api.ElectricityMeter;
 import io.openems.edge.meter.api.MeterType;
-import io.openems.edge.timedata.api.Timedata;
-import io.openems.edge.timedata.api.TimedataProvider;
 
 // NOTE: we stick with the name `Meter.Microcare.SDM630` for backwards compatibility
 @Designate(ocd = Config.class, factory = true)
@@ -51,16 +49,13 @@ import io.openems.edge.timedata.api.TimedataProvider;
 @EventTopics({ //
 		EdgeEventConstants.TOPIC_CYCLE_AFTER_PROCESS_IMAGE //
 })
-public class MeterEastronSdm630Impl extends AbstractOpenemsModbusComponent implements MeterEastronSdm630,
-		ElectricityMeter, ModbusComponent, OpenemsComponent, ModbusSlave, TimedataProvider {
+public class MeterEastronSdm630Impl extends AbstractOpenemsModbusComponent
+		implements MeterEastronSdm630, ElectricityMeter, ModbusComponent, OpenemsComponent, ModbusSlave {
 
 	private MeterType meterType = MeterType.PRODUCTION;
 
 	@Reference
 	private ConfigurationAdmin cm;
-
-	@Reference(policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.OPTIONAL)
-	private volatile Timedata timedata;
 
 	@Override
 	@Reference(policy = ReferencePolicy.STATIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.MANDATORY)
@@ -273,15 +268,15 @@ public class MeterEastronSdm630Impl extends AbstractOpenemsModbusComponent imple
 							m(ElectricityMeter.ChannelId.REACTIVE_POWER_L1,
 									new FloatDoublewordElement(30025 - offset).wordOrder(WordOrder.MSWLSW)
 											.byteOrder(ByteOrder.BIG_ENDIAN),
-									DIRECT_1_TO_1),
+									KEEP_POSITIVE),
 							m(ElectricityMeter.ChannelId.REACTIVE_POWER_L2,
 									new FloatDoublewordElement(30027 - offset).wordOrder(WordOrder.MSWLSW)
 											.byteOrder(ByteOrder.BIG_ENDIAN),
-									DIRECT_1_TO_1),
+									KEEP_POSITIVE),
 							m(ElectricityMeter.ChannelId.REACTIVE_POWER_L3,
 									new FloatDoublewordElement(30029 - offset).wordOrder(WordOrder.MSWLSW)
 											.byteOrder(ByteOrder.BIG_ENDIAN),
-									DIRECT_1_TO_1),
+									KEEP_POSITIVE),
 							new DummyRegisterElement(30031 - offset, 30048 - offset),
 							m(ElectricityMeter.ChannelId.CURRENT,
 									new FloatDoublewordElement(30049 - offset).wordOrder(WordOrder.MSWLSW)
@@ -292,12 +287,13 @@ public class MeterEastronSdm630Impl extends AbstractOpenemsModbusComponent imple
 							m(ElectricityMeter.ChannelId.ACTIVE_POWER,
 									new FloatDoublewordElement(30053 - offset).wordOrder(WordOrder.MSWLSW)
 											.byteOrder(ByteOrder.BIG_ENDIAN),
-									DIRECT_1_TO_1),
+									KEEP_POSITIVE),
+
 							new DummyRegisterElement(30055 - offset, 30060 - offset),
 							m(ElectricityMeter.ChannelId.REACTIVE_POWER,
 									new FloatDoublewordElement(30061 - offset).wordOrder(WordOrder.MSWLSW)
 											.byteOrder(ByteOrder.BIG_ENDIAN),
-									DIRECT_1_TO_1),
+									KEEP_POSITIVE),
 							new DummyRegisterElement(30063 - offset, 30070 - offset), m(
 									ElectricityMeter.ChannelId.FREQUENCY, new FloatDoublewordElement(30071 - offset)
 											.wordOrder(WordOrder.MSWLSW).byteOrder(ByteOrder.BIG_ENDIAN),
@@ -368,11 +364,6 @@ public class MeterEastronSdm630Impl extends AbstractOpenemsModbusComponent imple
 				OpenemsComponent.getModbusSlaveNatureTable(accessMode), //
 				ElectricityMeter.getModbusSlaveNatureTable(accessMode) //
 		);
-	}
-
-	@Override
-	public Timedata getTimedata() {
-		return this.timedata;
 	}
 
 }

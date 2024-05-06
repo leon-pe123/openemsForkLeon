@@ -44,6 +44,7 @@ import io.openems.edge.bridge.modbus.api.task.FC3ReadRegistersTask;
 import io.openems.edge.bridge.modbus.sunspec.DefaultSunSpecModel;
 import io.openems.edge.bridge.modbus.sunspec.SunSpecModel;
 import io.openems.edge.common.channel.EnumReadChannel;
+
 import io.openems.edge.common.component.ComponentManager;
 import io.openems.edge.common.component.OpenemsComponent;
 import io.openems.edge.common.modbusslave.ModbusSlave;
@@ -68,6 +69,7 @@ import io.openems.edge.solaredge.enums.AcChargePolicy;
 import io.openems.edge.solaredge.enums.ChargeDischargeMode;
 import io.openems.edge.solaredge.charger.SolaredgeDcCharger;
 import io.openems.edge.solaredge.common.AverageCalculator;
+import io.openems.edge.solaredge.common.PidController;
 
 @Designate(ocd = Config.class, factory = true)
 @Component(//
@@ -94,6 +96,8 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	protected static final int HW_MAX_APPARENT_POWER = 10000;
 	protected static final int HW_ALLOWED_CHARGE_POWER = -5000;
 	protected static final int HW_ALLOWED_DISCHARGE_POWER = 5000;
+
+	private PidController pidController;
 
 	protected static final int HW_TOLERANCE = 500; // Tolerance in Watt before new charge power value is applied
 
@@ -188,6 +192,10 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		}
 
 		this.installListener();
+
+		int feedToGridPowerLimit = this.config.feedToGridPowerLimit();
+		this.pidController = new PidController(0.1, 0.01, 0.01);
+		this.pidController.setSetpoint(feedToGridPowerLimit);
 	}
 
 	@Override
@@ -310,31 +318,65 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	}
 
 	private void limitPvPower() {
+		if (this.chargers.isEmpty()) {
+			return; // Exit early if no chargers are connected
+		}
 
-		// version to limit according to configured limit
-		// Get the grid power and ess power
-		Integer gridPower = this.meter.getActivePower().get(); // current buy-from/sell-to grid
-		if (gridPower == null) {
+		// Safely fetch values and handle potential nulls
+		Integer gridPower = this.meter.getActivePower().get(); // could be null. negative while feed to grid
+
+		Integer maxPvProductionPowerLimit = this.config.maxPvProductionPowerLimit(); //  could be null, Positive value
+
+		Integer feedToGridPowerLimit = this.config.feedToGridPowerLimit(); // could be null, Positive value
+		Integer essActivePower = this.getActivePower().get(); // could be null
+		Integer currentPvProductionPower = this.getPvProductionPower();
+
+		if (currentPvProductionPower == null || currentPvProductionPower < 1000) {
+			this.logDebug(this.log, "PV Power NULL or <1000");
 			return;
 		}
 
-		// Checking if the grid power is above the maximum feed-in
-		if (gridPower * -1 > this.config.feedToGridPowerLimit()) {
+	    double currentTime = System.currentTimeMillis() / 1000.0;
+	    int pvPowerSetPoint = maxPvProductionPowerLimit != null ? maxPvProductionPowerLimit : HW_MAX_APPARENT_POWER;
 
-			// Calculate actual limit for Ess
-			var essPowerLimit = gridPower + this.getActivePower().get() + this.config.feedToGridPowerLimit();
-			this.logDebug(this.log, "Ess power limit: " + essPowerLimit + "W");
+	    if (gridPower != null && feedToGridPowerLimit != null && essActivePower != null) {
+	        if (gridPower < 0) {  // Only control if feeding to grid
+	            Integer pidInput = -gridPower;  // PID input is the positive magnitude of grid feed
+	            if (pidInput > feedToGridPowerLimit ) {
+	            	
+	            	
+		            int pidOutput = this.pidController.update(pidInput, currentTime);
+		            pvPowerSetPoint = (int) Math.max(0, currentPvProductionPower - pidOutput);	    
+		            
+		            this.logDebug(this.log, "PV pidOutput: "+ pidOutput + 
+		            		"\n pvPowerSetPoint: " + pvPowerSetPoint +
+		            		"\n pidInput: " + pidInput +
+		            		"\n currentPvProductionPower: " + currentPvProductionPower
+		            		
+		            		);
+		            
+	            }
 
-			// Apply limit
-			int powerPerCharger = (int) Math.round(Math.abs(essPowerLimit) / this.chargers.size());
+	            pvPowerSetPoint = Math.min(pvPowerSetPoint, maxPvProductionPowerLimit);
+	        }
+	    }
+	    
+		// Log the calculated or default pv power set point
+		this.logDebug(this.log, "PV Power Setpoint: " + pvPowerSetPoint);
+
+		// Distribute power to chargers if the setpoint is above a minimal operational
+		// threshold
+		if (pvPowerSetPoint > 1000) {
+			int powerPerCharger = (int) Math.round(Math.abs(pvPowerSetPoint) / this.chargers.size());
 			for (SolaredgeDcCharger charger : this.chargers) {
-				charger._calculateAndSetPvPowerLimit(powerPerCharger);
-				// this.logDebug(this.log, "Limit per Charger Wanted: " + powerPerCharger +
-				// "W");
+				//charger._calculateAndSetPvPowerLimit(powerPerCharger);
+				this.logDebug(this.log, "<<<PV per Charger limit " + powerPerCharger + "W>>>>>");
 			}
-			this.logDebug(this.log, "PvLimiter->GridPower: " + gridPower + "W Limit: " + essPowerLimit);
+		} else {
+			this.logDebug(this.log, "PV power setpoint below operational threshold: " + pvPowerSetPoint);
 		}
 
+		this.logDebug(this.log, "Final PV Power Setpoint: " + pvPowerSetPoint);
 	}
 
 	/**

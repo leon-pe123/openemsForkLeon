@@ -47,6 +47,7 @@ import io.openems.edge.common.taskmanager.Priority;
 import io.openems.edge.ess.dccharger.api.EssDcCharger;
 import io.openems.edge.batteryinverter.sunspec.AbstractSunSpecDcCharger;
 import io.openems.edge.solaredge.common.AverageCalculator;
+
 import io.openems.edge.solaredge.enums.ActiveInactive;
 import io.openems.edge.solaredge.enums.PvMode;
 import io.openems.edge.solaredge.hybrid.ess.SolarEdgeHybridEss;
@@ -358,7 +359,6 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 				handleState(PvMode.PRODUCING); //
 			}
 
-			
 			if (lastDcPowerScale == dcPowerScale) {
 
 				if (pvDcProduction < 0) {
@@ -373,7 +373,6 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 					this._setActualPower(pvDcProduction);
 					this.calculateActualEnergy.update(pvDcProduction);
 
-					
 				}
 			} else { // Actual ScaleFactor is NOT used
 
@@ -393,14 +392,12 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 
 	private void handleState(PvMode newState) {
 
-
 		if (currentState == newState) {
 			return;
 		}
 		// Perform actions based on the state transition
 		switch (newState) {
 		case WAITING: //
-			
 
 		case PRODUCING:
 			if (this.isLimiting) {
@@ -488,7 +485,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 
 		// Calculate the new limit as a percentage of the maximum possible hardware
 		// limit
-		Integer newLimitPercent = (int) ((pvLimit * 100.0) / maxActivePowerLimit);
+		Integer newLimitPercent = (int) ((pvLimit * 100.0) / maxActivePowerLimit) - tolerance;
 
 		// Check that the new limit does not exceed 100% of the hardware capability
 		if (newLimitPercent > 100) {
@@ -496,31 +493,25 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 			newLimitPercent = 100;
 		}
 
-		// Update only if the change is significant enough to exceed the tolerance
-		if (Math.abs(newLimitPercent - currentPercent) > tolerance) {
-			// Activate control mode if it's not already active
-			if (this.getSetPvPowerControlMode() != ActiveInactive.ACTIVE) {
-				try {
-					this.setPvPowerControlMode(ActiveInactive.ACTIVE);
-				} catch (OpenemsNamedException e) {
-					this.logDebug(this.log, "Failed to set Control Mode to ACTIVE: " + e.getMessage());
-					return; // Stop further execution if control mode activation fails
-				}
-			}
-
-			// Attempt to set the new power limit percentage and commit changes
+		if (this.getSetPvPowerControlMode() != ActiveInactive.ACTIVE) {
 			try {
-				this.setPvPowerLimitPercent(newLimitPercent);
-				this.commitPvPowerLimit(1); // Send '1' to commit changes
-				this.logDebug(this.log, "New Power Limit set to: " + newLimitPercent + "%");
-				this.handleState(PvMode.LIMIT_ACTIVE);
+				this.setPvPowerControlMode(ActiveInactive.ACTIVE);
 			} catch (OpenemsNamedException e) {
-				this.logDebug(this.log, "Failed to set PV Limit in percent: " + e.getMessage());
+				this.logDebug(this.log, "Failed to set Control Mode to ACTIVE: " + e.getMessage());
+				return; // Stop further execution if control mode activation fails
 			}
-		} else {
-			this.logDebug(this.log,
-					"No need to adjust limit: New " + newLimitPercent + "% vs. Current " + currentPercent + "%");
 		}
+
+		// Attempt to set the new power limit percentage and commit changes
+		try {
+			this.setPvPowerLimitPercent(newLimitPercent);
+			this.commitPvPowerLimit(1); // Send '1' to commit changes
+			this.logDebug(this.log, "New Power Limit set to: " + newLimitPercent + "%");
+			this.handleState(PvMode.LIMIT_ACTIVE);
+		} catch (OpenemsNamedException e) {
+			this.logDebug(this.log, "Failed to set PV Limit in percent: " + e.getMessage());
+		}
+
 	}
 
 	@Override

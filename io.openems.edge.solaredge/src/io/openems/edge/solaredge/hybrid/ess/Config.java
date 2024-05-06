@@ -41,6 +41,9 @@ import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 	@AttributeDefinition(name = "Feed-to-grid Power Limit", description = "Limits PV-production if limit exceeds ")
 	int feedToGridPowerLimit() default 10000;
 
+	@AttributeDefinition(name = "PV Power Limit", description = "Limits PV total production power. Overrides feed-to-grid-limit if lower")
+	int maxPvProductionPowerLimit() default 20000;	
+	
 	@AttributeDefinition(name = "Meter-ID", description = "ID of meter for sell-to-grid-limit")
 	String meter_id() default "meter0";
 
