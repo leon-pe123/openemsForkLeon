@@ -493,6 +493,15 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 			newLimitPercent = 100;
 		}
 
+		if (config.readOnlyMode() == true) {
+			this.logDebug(this.log, "Limit not applied. Read Only mode is active");
+			return;
+		}
+
+		if (currentPercent == newLimitPercent && newLimitPercent == 100) {
+			this.logDebug(this.log, "New/old Limit " + newLimitPercent + "% - nothing to do");
+			return;
+		}
 		if (this.getSetPvPowerControlMode() != ActiveInactive.ACTIVE) {
 			try {
 				this.setPvPowerControlMode(ActiveInactive.ACTIVE);

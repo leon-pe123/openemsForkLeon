@@ -194,7 +194,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		this.installListener();
 
 		int feedToGridPowerLimit = this.config.feedToGridPowerLimit();
-		this.pidController = new PidController(0.1, 0.01, 0.01,200);
+		this.pidController = new PidController(0.1, 0.01, 0.01, 200);
 		this.pidController.setSetpoint(feedToGridPowerLimit);
 	}
 
@@ -328,7 +328,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		Integer maxPvProductionPowerLimit = this.config.maxPvProductionPowerLimit(); // could be null, Positive value
 
 		Integer feedToGridPowerLimit = this.config.feedToGridPowerLimit(); // could be null, Positive value
-		Integer essActivePower = this.getActivePower().get(); // could be null
+		// Integer essActivePower = this.getActivePower().get(); // could be null
 		Integer currentPvProductionPower = this.getPvProductionPower();
 
 		if (currentPvProductionPower == null || currentPvProductionPower < 1000) {
@@ -337,34 +337,27 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		}
 
 		double currentTime = System.currentTimeMillis() / 1000.0;
-		int pvPowerSetPoint = maxPvProductionPowerLimit != null ? maxPvProductionPowerLimit : HW_MAX_APPARENT_POWER;
+		int pvPowerSetPoint = currentPvProductionPower; // initial SetPoint
 
-		if (gridPower != null && feedToGridPowerLimit != null && essActivePower != null) {
-			if (gridPower < 0) { // Only control if feeding to grid
-				Integer pidInput = -gridPower; // PID input is the positive magnitude of grid feed
-				if (pidInput > feedToGridPowerLimit) {
+		if (gridPower != null && feedToGridPowerLimit != null && -gridPower > feedToGridPowerLimit) {
 
-					int pidOutput = this.pidController.update(pidInput, currentTime);
-					pvPowerSetPoint = (int) Math.max(0, currentPvProductionPower - pidOutput);
+			int pidInput = -gridPower;
+			int pidOutput = this.pidController.update(pidInput, currentTime);
+			pvPowerSetPoint = Math.max(0, pvPowerSetPoint - pidOutput);
 
-					this.logDebug(this.log, "PV pidOutput: " + pidOutput + "\n pvPowerSetPoint: " + pvPowerSetPoint
-							+ "\n pidInput: " + pidInput + "\n currentPvProductionPower: " + currentPvProductionPower
+			this.logDebug(this.log, String.format("PV Setpoint Adjustment: Initial: %d, PID Output: %d, Adjusted: %d",
+					currentPvProductionPower, pidOutput, pvPowerSetPoint));
 
-					);
-
-				}
-
-			}
-		}
-
-		if (maxPvProductionPowerLimit != null) {
-			// Bedingung 2: PV-Erzeugungslimit überprüfen
 			pvPowerSetPoint = Math.min(pvPowerSetPoint, maxPvProductionPowerLimit);
-			this.logDebug(this.log, "Anpassung wegen PV-Erzeugungslimit");
+
+		} else {
+			// If grid power is positive or does not exceed the feed-to-grid limit, maximize
+			// PV output
+			pvPowerSetPoint = maxPvProductionPowerLimit;
 		}
 
 		// Log the calculated or default pv power set point
-		this.logDebug(this.log, "PV Power Setpoint: " + pvPowerSetPoint);
+		this.logDebug(this.log, "final PV Power Setpoint: " + pvPowerSetPoint);
 
 		// Distribute power to chargers if the setpoint is above a minimal operational
 		// threshold
@@ -381,7 +374,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	private void distributePowerToChargers(int pvPowerSetPoint) {
 		int powerPerCharger = Math.round(Math.abs(pvPowerSetPoint) / this.chargers.size());
 		for (SolaredgeDcCharger charger : this.chargers) {
-			// charger._calculateAndSetPvPowerLimit(powerPerCharger);
+			charger._calculateAndSetPvPowerLimit(powerPerCharger);
 			this.logDebug(this.log, "<<<PV per Charger limit " + powerPerCharger + "W>>>>>");
 		}
 	}
