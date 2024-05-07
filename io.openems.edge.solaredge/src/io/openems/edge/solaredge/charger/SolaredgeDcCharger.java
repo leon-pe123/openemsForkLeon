@@ -257,7 +257,7 @@ public interface SolaredgeDcCharger extends EssDcCharger, OpenemsComponent {
 		ACTIVE_PV_ACTIVE_POWER_LIMIT(new IntegerDoc() //
 				.unit(Unit.WATT) //
 				.accessMode(AccessMode.READ_ONLY)),
-		
+
 		/**
 		 * Limits PV power generation. Note: This channel is shared between multiple
 		 * chargers. Use should be coordinated accordingly.
@@ -577,7 +577,7 @@ public interface SolaredgeDcCharger extends EssDcCharger, OpenemsComponent {
 	public default Value<Integer> getActivePvActivePowerLimit() {
 		return this.getActivePvActivePowerLimitChannel().value();
 	}
-	
+
 	// Access the channel for ACTIVE_PV_REACTIVE_POWER_LIMIT
 	public default IntegerReadChannel getActivePvReactivePowerLimitChannel() {
 		return this.channel(ChannelId.ACTIVE_PV_REACTIVE_POWER_LIMIT);
@@ -588,22 +588,22 @@ public interface SolaredgeDcCharger extends EssDcCharger, OpenemsComponent {
 		return this.getActivePvReactivePowerLimitChannel().value();
 	}
 
-	// Access the channel for ACTIVE_PV_POWER_LIMIT_PERCENT
+	// ACTIVE_PV_POWER_LIMIT_PERCENT
 	public default IntegerReadChannel getActivePvPowerLimitPercentChannel() {
 		return this.channel(ChannelId.ACTIVE_PV_POWER_LIMIT_PERCENT);
 	}
 
-	// Getter for ACTIVE_PV_POWER_LIMIT_PERCENT
+	// ACTIVE_PV_POWER_LIMIT_PERCENT
 	public default Value<Integer> getActivePvPowerLimitPercent() {
 		return this.getActivePvPowerLimitPercentChannel().value();
 	}
 
-	// Access the channel for SET_PV_POWER_LIMIT
+	// SET_PV_POWER_LIMIT
 	public default IntegerWriteChannel getPvPowerLimitChannel() {
 		return this.channel(ChannelId.SET_PV_POWER_LIMIT);
 	}
 
-	// Setter for SET_PV_POWER_LIMIT
+	// SET_PV_POWER_LIMIT
 	public default void setPvPowerLimit(Integer value) {
 		this.getPvPowerLimitChannel().setNextValue(value);
 	}
@@ -618,12 +618,12 @@ public interface SolaredgeDcCharger extends EssDcCharger, OpenemsComponent {
 		this.getPvPowerLimitPercentChannel().setNextWriteValue(value);
 	}
 
-	// Access the channel for COMMIT_PV_POWER_LIMIT
+	// COMMIT_PV_POWER_LIMIT
 	public default IntegerWriteChannel getCommitPvPowerLimitChannel() {
 		return this.channel(ChannelId.COMMIT_PV_POWER_LIMIT);
 	}
 
-	// Setter for COMMIT_PV_POWER_LIMIT
+	// COMMIT_PV_POWER_LIMIT
 	public default void commitPvPowerLimit(Integer value) throws OpenemsNamedException {
 		this.getCommitPvPowerLimitChannel().setNextWriteValue(value);
 	}
@@ -642,12 +642,11 @@ public interface SolaredgeDcCharger extends EssDcCharger, OpenemsComponent {
 	public default void setPvPowerControlMode(ActiveInactive value) throws OpenemsNamedException {
 		this.getSetPvPowerControlModeChannel().setNextWriteValue(value);
 	}
-	
 
 	/**
 	 * Sets Limits for PV-Production. The limitation refers to AC-side
 	 * (PV-production + DC-Charging may exeed this value)
 	 */
-	void _calculateAndSetPvPowerLimit(int maxPvPower);	
+	void _calculateAndSetPvPowerLimit(int maxPvPower);
 
 }

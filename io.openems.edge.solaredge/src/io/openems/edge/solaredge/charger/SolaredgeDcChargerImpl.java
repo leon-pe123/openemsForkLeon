@@ -465,7 +465,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 		Integer currentPercent = this.getActivePvPowerLimitPercent().get(); // current PV production limit in percent
 
 		Integer currentPowerLimit = this.getActivePvActivePowerLimit().get(); // current PV production limit in watts
-		int tolerance = 2; // % tolerance to avoid unnecessary updates
+		
 		this.logDebug(this.log, "Limit Wanted: " + maxPvPower + "W");
 
 		// Validate non-null and non-zero conditions to prevent calculation errors
@@ -485,7 +485,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 
 		// Calculate the new limit as a percentage of the maximum possible hardware
 		// limit
-		Integer newLimitPercent = (int) ((pvLimit * 100.0) / maxActivePowerLimit) - tolerance;
+		Integer newLimitPercent = (int) ((pvLimit * 100.0) / maxActivePowerLimit);
 
 		// Check that the new limit does not exceed 100% of the hardware capability
 		if (newLimitPercent > 100) {

@@ -180,22 +180,28 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 
 	@Activate
 	private void activate(ComponentContext context, Config config) throws OpenemsException {
-		if (super.activate(context, config.id(), config.alias(), config.enabled(), config.modbusUnitId(), this.cm,
-				"Modbus", config.modbus_id(), READ_FROM_MODBUS_BLOCK)) {
-			return;
+		try {
+			if (super.activate(context, config.id(), config.alias(), config.enabled(), config.modbusUnitId(), this.cm,
+					"Modbus", config.modbus_id(), READ_FROM_MODBUS_BLOCK)) {
+				return;
+			}
+			this.config = config;
+
+			// update filter for 'meter'
+			if (OpenemsComponent.updateReferenceFilter(this.cm, this.servicePid(), "meter", config.meter_id())) {
+				return;
+			}
+
+			this.installListener();
+
+			int feedToGridPowerLimit = this.config.feedToGridPowerLimit();
+			this.pidController = new PidController(0.1, 0.01, 0.01, 200, 200); //
+			this.pidController.setSetpoint(feedToGridPowerLimit);
+		} catch (Exception e) {
+			this.logError(this.log, "Error activating component: " + e.getMessage());
+			throw new OpenemsException("Activation failed: " + e.getMessage());
 		}
-		this.config = config;
 
-		// update filter for 'meter'
-		if (OpenemsComponent.updateReferenceFilter(this.cm, this.servicePid(), "meter", config.meter_id())) {
-			return;
-		}
-
-		this.installListener();
-
-		int feedToGridPowerLimit = this.config.feedToGridPowerLimit();
-		this.pidController = new PidController(0.1, 0.01, 0.01, 200);
-		this.pidController.setSetpoint(feedToGridPowerLimit);
 	}
 
 	@Override
@@ -331,8 +337,8 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		// Integer essActivePower = this.getActivePower().get(); // could be null
 		Integer currentPvProductionPower = this.getPvProductionPower();
 
-		if (currentPvProductionPower == null || currentPvProductionPower < 1000) {
-			this.logDebug(this.log, "PV Power NULL or <1000");
+		if (currentPvProductionPower == null) {
+			this.logDebug(this.log, "PV Power NULL or ");
 			return;
 		}
 
