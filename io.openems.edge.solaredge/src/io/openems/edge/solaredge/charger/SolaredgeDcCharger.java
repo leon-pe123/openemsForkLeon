@@ -4,8 +4,10 @@ import io.openems.common.channel.AccessMode;
 import io.openems.common.channel.PersistencePriority;
 import io.openems.common.channel.Unit;
 import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
+
 import io.openems.common.types.OpenemsType;
 
+import io.openems.edge.common.channel.Channel;
 import io.openems.edge.common.channel.Doc;
 import io.openems.edge.common.channel.EnumWriteChannel;
 import io.openems.edge.common.channel.IntegerDoc;
@@ -16,7 +18,9 @@ import io.openems.edge.common.channel.value.Value;
 import io.openems.edge.common.component.OpenemsComponent;
 import io.openems.edge.common.sum.GridMode;
 import io.openems.edge.ess.dccharger.api.EssDcCharger;
+
 import io.openems.edge.solaredge.enums.ActiveInactive;
+import io.openems.edge.solaredge.enums.PvMode;
 
 public interface SolaredgeDcCharger extends EssDcCharger, OpenemsComponent {
 
@@ -140,7 +144,7 @@ public interface SolaredgeDcCharger extends EssDcCharger, OpenemsComponent {
 		 * <li>Unit: Watt
 		 * </ul>
 		 */
-		POWER_DC(Doc.of(OpenemsType.INTEGER) //
+		DC_POWER(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
@@ -153,7 +157,7 @@ public interface SolaredgeDcCharger extends EssDcCharger, OpenemsComponent {
 		 * <li>Unit: Factor
 		 * </ul>
 		 */
-		POWER_DC_SCALE(Doc.of(OpenemsType.INTEGER) //
+		DC_POWER_SCALE(Doc.of(OpenemsType.INTEGER) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**
@@ -285,6 +289,18 @@ public interface SolaredgeDcCharger extends EssDcCharger, OpenemsComponent {
 		ACTIVE_PV_POWER_LIMIT_PERCENT(new IntegerDoc() //
 				.unit(Unit.PERCENT) //
 				.accessMode(AccessMode.READ_ONLY)),
+
+		/**
+		 * Active State of DC Charger.
+		 * 
+		 *
+		 * <ul>
+		 * <li>Interface: SolaredgeDcCharger
+		 * <li>Type: Enum
+		 * <li>Unit: PvMode
+		 * </ul>
+		 */
+		PV_MODE(Doc.of(PvMode.values()).accessMode(AccessMode.READ_WRITE)),
 
 		/**
 		 * Voltage from the battery.
@@ -439,7 +455,7 @@ public interface SolaredgeDcCharger extends EssDcCharger, OpenemsComponent {
 	 * @return the Channel
 	 */
 	public default IntegerReadChannel getDcPowerChannel() {
-		return this.channel(ChannelId.POWER_DC);
+		return this.channel(ChannelId.DC_POWER);
 	}
 
 	/**
@@ -458,7 +474,7 @@ public interface SolaredgeDcCharger extends EssDcCharger, OpenemsComponent {
 	 * @return the Channel
 	 */
 	public default IntegerReadChannel getDcPowerScaleChannel() {
-		return this.channel(ChannelId.POWER_DC_SCALE);
+		return this.channel(ChannelId.DC_POWER_SCALE);
 	}
 
 	/**
@@ -593,9 +609,29 @@ public interface SolaredgeDcCharger extends EssDcCharger, OpenemsComponent {
 		return this.channel(ChannelId.ACTIVE_PV_POWER_LIMIT_PERCENT);
 	}
 
+	// Setter for SET_PV_POWER_LIMIT_PERCENT
+	public default void setPvPowerLimitPercent(Integer value) throws OpenemsNamedException {
+		this.getPvPowerLimitPercentChannel().setNextWriteValue(value);
+	}
+
 	// ACTIVE_PV_POWER_LIMIT_PERCENT
 	public default Value<Integer> getActivePvPowerLimitPercent() {
 		return this.getActivePvPowerLimitPercentChannel().value();
+	}
+
+	// PvMode
+	public default Channel<PvMode> getPvModeChannel() {
+		return this.channel(ChannelId.PV_MODE);
+	}
+
+	// PvMode
+	public default void setPvMode(PvMode value) throws OpenemsNamedException {
+		this.getPvModeChannel().setNextValue(value);
+	}
+
+	// PvMode
+	public default PvMode getPvMode() {
+		return this.getPvModeChannel().value().asEnum();
 	}
 
 	// SET_PV_POWER_LIMIT
@@ -611,11 +647,6 @@ public interface SolaredgeDcCharger extends EssDcCharger, OpenemsComponent {
 	// Access the channel for SET_PV_POWER_LIMIT_PERCENT
 	public default IntegerWriteChannel getPvPowerLimitPercentChannel() {
 		return this.channel(ChannelId.SET_PV_POWER_LIMIT_PERCENT);
-	}
-
-	// Setter for SET_PV_POWER_LIMIT_PERCENT
-	public default void setPvPowerLimitPercent(Integer value) throws OpenemsNamedException {
-		this.getPvPowerLimitPercentChannel().setNextWriteValue(value);
 	}
 
 	// COMMIT_PV_POWER_LIMIT

@@ -81,7 +81,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 	private final Logger log = LoggerFactory.getLogger(SolaredgeDcChargerImpl.class);
 	private Config config;
 
-	private PvMode currentState = PvMode.UNDEFINED; // Default state
+	public PvMode currentState = PvMode.UNDEFINED; // Default state
 
 	private boolean isLimiting = false;
 
@@ -313,9 +313,9 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 						m(SolaredgeDcCharger.ChannelId.VOLTAGE_DC_SCALE, //
 								new SignedWordElement(0x9CA3)),
 						// Power
-						m(SolaredgeDcCharger.ChannelId.POWER_DC, //
+						m(SolaredgeDcCharger.ChannelId.DC_POWER, //
 								new SignedWordElement(0x9CA4)),
-						m(SolaredgeDcCharger.ChannelId.POWER_DC_SCALE, //
+						m(SolaredgeDcCharger.ChannelId.DC_POWER_SCALE, //
 								new SignedWordElement(0x9CA5))));
 	}
 
@@ -426,6 +426,13 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 		this.logDebug(log, "Transitioning from " + currentState.getName() + " to " + newState.getName());
 		// Update the current state
 		currentState = newState;
+
+		try {
+			this.setPvMode(newState);
+		} catch (OpenemsNamedException e) {
+			this.logDebug(this.log, "Unable to set DC Charger pvMode: " + e.getMessage());
+
+		}
 	}
 
 	private void setInitalPvLimit() {
@@ -465,7 +472,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 		Integer currentPercent = this.getActivePvPowerLimitPercent().get(); // current PV production limit in percent
 
 		Integer currentPowerLimit = this.getActivePvActivePowerLimit().get(); // current PV production limit in watts
-		
+
 		this.logDebug(this.log, "Limit Wanted: " + maxPvPower + "W");
 
 		// Validate non-null and non-zero conditions to prevent calculation errors
@@ -500,6 +507,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 
 		if (currentPercent == newLimitPercent && newLimitPercent == 100) {
 			this.logDebug(this.log, "New/old Limit " + newLimitPercent + "% - nothing to do");
+			this.isLimiting = false;
 			return;
 		}
 		if (this.getSetPvPowerControlMode() != ActiveInactive.ACTIVE) {
@@ -516,6 +524,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 			this.setPvPowerLimitPercent(newLimitPercent);
 			this.commitPvPowerLimit(1); // Send '1' to commit changes
 			this.logDebug(this.log, "New Power Limit set to: " + newLimitPercent + "%");
+			this.isLimiting = true;			
 			this.handleState(PvMode.LIMIT_ACTIVE);
 		} catch (OpenemsNamedException e) {
 			this.logDebug(this.log, "Failed to set PV Limit in percent: " + e.getMessage());

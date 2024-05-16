@@ -11,18 +11,20 @@ public class PidController {
 	private double previousError; // Last error recorded
 	private double lastUpdateTime; // Time of last update
 	private double previousOutput;
-	private double tolerance; // Tolerance for not exceeding the limit
+	
+	private double deadband;
 
-	public PidController(double kp, double ki, double kd, double deltaMax, double tolerance) {
+	public PidController(double kp, double ki, double kd, double deltaMax,  double deadband) {
 		this.kp = kp;
 		this.ki = ki;
 		this.kd = kd;
 		this.deltaMax = deltaMax;
-		this.tolerance = tolerance;
+		
+		this.deadband = deadband;		
 		this.setpoint = 0;
 		this.integral = 0;
 		this.previousError = 0;
-		this.lastUpdateTime = System.currentTimeMillis() / 1000.0; // Initialize with current time in seconds
+		this.lastUpdateTime = System.currentTimeMillis() / 1000.0;
 		this.previousOutput = 0;
 	}
 
@@ -35,21 +37,31 @@ public class PidController {
 		lastUpdateTime = currentTime;
 
 		double error = setpoint - measuredValue;
+		if (Math.abs(error) < deadband) {
+			error = 0;
+		}
+		// Proportional Term
+		double proportional = kp * error;
+
+		// Integral Term
 		integral += error * deltaTime;
+		double integralTerm = ki * integral;
+
+		// Derivative Term
 		double derivative = (error - previousError) / deltaTime;
+		double derivativeTerm = kd * derivative;
+
 		previousError = error;
 
-		double output = kp * error + ki * integral + kd * derivative;
-		// Apply tolerance only if output is attempting to exceed the setpoint
-		if (output > setpoint) {
-			output = setpoint - tolerance; // Adjust to stay below the setpoint by the tolerance amount
-		}
+		// Combine all terms
+		double output = proportional + integralTerm + derivativeTerm;
 
-		// Limit the output change by the step size
-		double outputChange = output - this.previousOutput;
-		output = this.previousOutput + Math.max(-deltaMax, Math.min(deltaMax, outputChange));
+		// Limit changes to deltaMax
+		double outputChange = output - previousOutput;
+		output = previousOutput + Math.max(-deltaMax, Math.min(deltaMax, outputChange));
 		this.previousOutput = output;
 
 		return (int) output;
 	}
 }
+

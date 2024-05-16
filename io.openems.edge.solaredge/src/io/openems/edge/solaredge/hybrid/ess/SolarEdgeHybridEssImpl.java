@@ -1,6 +1,5 @@
 package io.openems.edge.solaredge.hybrid.ess;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -62,6 +61,7 @@ import io.openems.edge.ess.power.api.Power;
 import io.openems.edge.meter.api.ElectricityMeter;
 import io.openems.edge.pvinverter.api.ManagedSymmetricPvInverter;
 import io.openems.edge.solaredge.enums.ControlMode;
+import io.openems.edge.solaredge.enums.PvMode;
 import io.openems.edge.timedata.api.Timedata;
 import io.openems.edge.timedata.api.TimedataProvider;
 import io.openems.edge.timedata.api.utils.CalculateEnergyFromPower;
@@ -69,7 +69,7 @@ import io.openems.edge.solaredge.enums.AcChargePolicy;
 import io.openems.edge.solaredge.enums.ChargeDischargeMode;
 import io.openems.edge.solaredge.charger.SolaredgeDcCharger;
 import io.openems.edge.solaredge.common.AverageCalculator;
-import io.openems.edge.solaredge.common.PidController;
+
 
 @Designate(ocd = Config.class, factory = true)
 @Component(//
@@ -87,7 +87,8 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 
 	private static boolean DEBUG_MODE = false;
 	private static final int READ_FROM_MODBUS_BLOCK = 1;
-	private final List<SolaredgeDcCharger> chargers = new ArrayList<>();
+	// private final List<SolaredgeDcCharger> chargers = new ArrayList<>();
+	private SolaredgeDcCharger charger;
 
 	private final Logger log = LoggerFactory.getLogger(SolarEdgeHybridEss.class);
 
@@ -96,8 +97,6 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	protected static final int HW_MAX_APPARENT_POWER = 10000;
 	protected static final int HW_ALLOWED_CHARGE_POWER = -5000;
 	protected static final int HW_ALLOWED_DISCHARGE_POWER = 5000;
-
-	private PidController pidController;
 
 	protected static final int HW_TOLERANCE = 500; // Tolerance in Watt before new charge power value is applied
 
@@ -124,6 +123,8 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	// Calculate moving average over last x values - we use 5 here
 	private AverageCalculator acPowerAverageCalculator = new AverageCalculator(5);
 	private AverageCalculator activePowerWantedAverageCalculator = new AverageCalculator(5);
+	private AverageCalculator pvProductionAverageCalculator = new AverageCalculator(5);
+	private AverageCalculator feedToGridAverageCalculator = new AverageCalculator(5);
 
 	private Config config;
 
@@ -194,9 +195,6 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 
 			this.installListener();
 
-			int feedToGridPowerLimit = this.config.feedToGridPowerLimit();
-			this.pidController = new PidController(0.1, 0.01, 0.01, 200, 200); //
-			this.pidController.setSetpoint(feedToGridPowerLimit);
 		} catch (Exception e) {
 			this.logError(this.log, "Error activating component: " + e.getMessage());
 			throw new OpenemsException("Activation failed: " + e.getMessage());
@@ -253,15 +251,26 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	public Timedata getTimedata() {
 		return this.timedata;
 	}
+	/*
+	 * @Override public void addCharger(SolaredgeDcCharger charger) {
+	 * this.chargers.add(charger); }
+	 * 
+	 * @Override public void removeCharger(SolaredgeDcCharger charger) {
+	 * this.chargers.remove(charger); }
+	 */
 
+	// Update method to add a single charger
 	@Override
 	public void addCharger(SolaredgeDcCharger charger) {
-		this.chargers.add(charger);
+		this.charger = charger;
 	}
 
+	// Update method to remove the single charger
 	@Override
 	public void removeCharger(SolaredgeDcCharger charger) {
-		this.chargers.remove(charger);
+		if (this.charger == charger) {
+			this.charger = null;
+		}
 	}
 
 	@Override
@@ -323,11 +332,13 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 
 	}
 
-	private void limitPvPower() {
-		if (this.chargers.isEmpty()) {
+	protected void limitPvPower() {
+
+		if (this.charger == null) {
 			return; // Exit early if no chargers are connected
 		}
 
+		int tolerance = 500;
 		// Safely fetch values and handle potential nulls
 		Integer gridPower = this.meter.getActivePower().get(); // could be null. negative while feed to grid
 
@@ -335,24 +346,32 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 
 		Integer feedToGridPowerLimit = this.config.feedToGridPowerLimit(); // could be null, Positive value
 		// Integer essActivePower = this.getActivePower().get(); // could be null
-		Integer currentPvProductionPower = this.getPvProductionPower();
+		Integer currentPvProductionPower = this.getPvProductionPower(); // always positive
+
+		this.charger.getPvMode();
 
 		if (currentPvProductionPower == null) {
 			this.logDebug(this.log, "PV Power NULL or ");
 			return;
 		}
 
-		double currentTime = System.currentTimeMillis() / 1000.0;
 		int pvPowerSetPoint = currentPvProductionPower; // initial SetPoint
+		
 
-		if (gridPower != null && feedToGridPowerLimit != null && -gridPower > feedToGridPowerLimit) {
+		// If limitation is active we have to control the limitation.
+		// Reason: If feed to grid exceeds limit we have to decrease limitation, too.
+		if (gridPower != null && feedToGridPowerLimit != null && -gridPower > feedToGridPowerLimit
+				|| this.charger.getPvMode() == PvMode.LIMIT_ACTIVE) {
+			feedToGridAverageCalculator.addValue(gridPower);
+			
+			int feedToGrid = feedToGridAverageCalculator.getAverage(); // negative value
+			int pvProduction = pvProductionAverageCalculator.getAverage();
+			
+			pvPowerSetPoint = pvProduction + feedToGrid + feedToGridPowerLimit
+					- tolerance;
 
-			int pidInput = -gridPower;
-			int pidOutput = this.pidController.update(pidInput, currentTime);
-			pvPowerSetPoint = Math.max(0, pvPowerSetPoint - pidOutput);
-
-			this.logDebug(this.log, String.format("PV Setpoint Adjustment: Initial: %d, PID Output: %d, Adjusted: %d",
-					currentPvProductionPower, pidOutput, pvPowerSetPoint));
+			this.logDebug(this.log, String.format("PV Setpoint Adjustment: FeedToGridAvg: %d ProductionAvg: %d, , Adjusted: %d",
+					feedToGrid, pvProduction, pvPowerSetPoint));
 
 			pvPowerSetPoint = Math.min(pvPowerSetPoint, maxPvProductionPowerLimit);
 
@@ -368,7 +387,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		// Distribute power to chargers if the setpoint is above a minimal operational
 		// threshold
 		if (pvPowerSetPoint > 1000) {
-			distributePowerToChargers(pvPowerSetPoint);
+			distributePowerToCharger(pvPowerSetPoint);
 
 		} else {
 			this.logDebug(this.log, "PV power setpoint below operational threshold: " + pvPowerSetPoint);
@@ -377,11 +396,13 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		this.logDebug(this.log, "Final PV Power Setpoint: " + pvPowerSetPoint);
 	}
 
-	private void distributePowerToChargers(int pvPowerSetPoint) {
-		int powerPerCharger = Math.round(Math.abs(pvPowerSetPoint) / this.chargers.size());
-		for (SolaredgeDcCharger charger : this.chargers) {
-			charger._calculateAndSetPvPowerLimit(powerPerCharger);
-			this.logDebug(this.log, "<<<PV per Charger limit " + powerPerCharger + "W>>>>>");
+	// Method to distribute power directly to the single charger
+	private void distributePowerToCharger(int pvPowerSetPoint) {
+		if (charger != null) {
+			charger._calculateAndSetPvPowerLimit(pvPowerSetPoint);
+			this.logDebug(this.log, "<<<PV per Charger limit " + pvPowerSetPoint + "W>>>>>");
+		} else {
+			this.logDebug(this.log, "No charger available for setting power limit.");
 		}
 	}
 
@@ -426,14 +447,14 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	}
 
 	private void setChargeDischargeModes() throws OpenemsNamedException {
-		this._setControlMode(ControlMode.SE_CTRL_MODE_REMOTE); // enable device' remote control mode
-		this._setAcChargePolicy(AcChargePolicy.SE_CHARGE_DISCHARGE_MODE_ALWAYS); // Allows charging/discharging on
+		this.setControlMode(ControlMode.SE_CTRL_MODE_REMOTE); // enable device' remote control mode
+		this.setAcChargePolicy(AcChargePolicy.SE_CHARGE_DISCHARGE_MODE_ALWAYS); // Allows charging/discharging on
 																					// AC-side
 
 		// If modes fail - go back to automatic mode after 60 seconds
 		if (!isControlModeRemote() || !isStorageChargePolicyAlways()) {
-			this._setChargeDischargeDefaultMode(ChargeDischargeMode.SE_CHARGE_POLICY_MAX_SELF_CONSUMPTION);
-			this._setRemoteControlTimeout(60);
+			this.setChargeDischargeDefaultMode(ChargeDischargeMode.SE_CHARGE_POLICY_MAX_SELF_CONSUMPTION);
+			this.setRemoteControlTimeout(60);
 
 		}
 	}
@@ -444,7 +465,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	private void applyDcPowerSettings(Integer chargePower, int maxChargePower, int maxDischargePower) {
 		try {
 
-			this._setChargePowerWanted(chargePower);
+			this.setChargePowerWanted(chargePower);
 			this.channel(SolarEdgeHybridEss.ChannelId.CHARGE_POWER).setNextValue(chargePower);
 
 			// setPowerModes(chargePower, maxChargePower, maxDischargePower);
@@ -483,9 +504,9 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	 * target power. This is directly written to the device
 	 */
 	private void applyChargeMode(Integer chargePower) throws OpenemsNamedException {
-		this._setRemoteControlCommandMode(ChargeDischargeMode.SE_CHARGE_POLICY_PV_AC);
-		this._setMaxChargePower(Math.abs(chargePower));
-		this._setMaxDischargePower(0);
+		this.setRemoteControlCommandMode(ChargeDischargeMode.SE_CHARGE_POLICY_PV_AC);
+		this.setMaxChargePower(Math.abs(chargePower));
+		this.setMaxDischargePower(0);
 	}
 
 	/**
@@ -493,9 +514,9 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	 * target power. This is directly written to the device
 	 */
 	private void applyDischargeMode(Integer chargePower) throws OpenemsNamedException {
-		this._setRemoteControlCommandMode(ChargeDischargeMode.SE_CHARGE_POLICY_MAX_EXPORT);
-		this._setMaxDischargePower(chargePower);
-		this._setMaxChargePower(0);
+		this.setRemoteControlCommandMode(ChargeDischargeMode.SE_CHARGE_POLICY_MAX_EXPORT);
+		this.setMaxDischargePower(chargePower);
+		this.setMaxChargePower(0);
 	}
 
 	/**
@@ -565,7 +586,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 
 	private void switchToAutomaticMode() {
 		try {
-			this._setControlMode(ControlMode.SE_CTRL_MODE_MAX_SELF_CONSUMPTION);
+			this.setControlMode(ControlMode.SE_CTRL_MODE_MAX_SELF_CONSUMPTION);
 		} catch (OpenemsNamedException e) {
 			this.logError(this.log, "Cannot fall back to automatic mode " + e.getMessage());
 		}
@@ -586,20 +607,20 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 			}
 
 			if (soc < minSocPercentage) {
-				this._setUseableCapacity(0);
+				this.setUseableCapacity(0);
 			} else {
 				soc = soc - minSocPercentage;
 				// Normalize the soc to a 0-100% range over the range (100 - minSocPercentage)
 				float normalizedSoc = (float) soc / (100 - minSocPercentage) * 100;
 				// Calculate useable capacity based on normalized SoC
 				int useableCapacity = (int) Math.round((float) value.get() * (normalizedSoc / 100f));
-				this._setUseableCapacity(useableCapacity);
-				this._setUseableSoc((int) normalizedSoc);
+				this.setUseableCapacity(useableCapacity);
+				this.setUseableSoc((int) normalizedSoc);
 			}
 
 			if (soc <= 0) {
-				this._setUseableCapacity(0);
-				this._setUseableSoc(0);
+				this.setUseableCapacity(0);
+				this.setUseableSoc(0);
 			}
 		});
 	}
@@ -681,17 +702,17 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		protocol.addTask(//
 				new FC3ReadRegistersTask(0x9C93, Priority.HIGH, //
 						//
-						m(SolarEdgeHybridEss.ChannelId.POWER_AC, //
+						m(SolarEdgeHybridEss.ChannelId.AC_POWER, //
 								new SignedWordElement(0x9C93)),
-						m(SolarEdgeHybridEss.ChannelId.POWER_AC_SCALE, //
+						m(SolarEdgeHybridEss.ChannelId.AC_POWER_SCALE, //
 								new SignedWordElement(0x9C94))));
 
 		protocol.addTask(//
 				new FC3ReadRegistersTask(0x9CA4, Priority.HIGH, //
 
-						m(SolarEdgeHybridEss.ChannelId.POWER_DC, //
+						m(SolarEdgeHybridEss.ChannelId.DC_POWER, //
 								new SignedWordElement(0x9CA4)),
-						m(SolarEdgeHybridEss.ChannelId.POWER_DC_SCALE, //
+						m(SolarEdgeHybridEss.ChannelId.DC_POWER_SCALE, //
 								new SignedWordElement(0x9CA5))));
 
 		protocol.addTask(//
@@ -741,7 +762,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 								new FloatDoublewordElement(0xE182).wordOrder(WordOrder.LSWMSW)),
 						m(SymmetricEss.ChannelId.SOC, //
 								new FloatDoublewordElement(0xE184).wordOrder(WordOrder.LSWMSW)),
-						m(SolarEdgeHybridEss.ChannelId.BATTERY_STATUS, //
+						m(SolarEdgeHybridEss.ChannelId.BATT_STATUS, //
 								new UnsignedDoublewordElement(0xE186).wordOrder(WordOrder.LSWMSW))));
 
 		protocol.addTask(//
@@ -875,16 +896,21 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	}
 
 	/**
-	 * Gets PV production power from charger(s).
+	 * Gets PV production power from charger.
 	 * 
 	 * @return PV production power in Watts
 	 */
 	public Integer getPvProductionPower() {
-		Integer pvProductionPower = null;
-		for (SolaredgeDcCharger charger : this.chargers) {
-			pvProductionPower = TypeUtils.sum(pvProductionPower, charger.getActualPower().get());
+		if (charger == null) {
+			return null;
 		}
+		if (charger.getActualPower().get() == null) {
+			return null;
+		}
+		int pvProductionPower = charger.getActualPower().get();
+		pvProductionAverageCalculator.addValue(pvProductionPower);
 		return pvProductionPower;
+
 	}
 
 	@Override
