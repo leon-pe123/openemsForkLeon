@@ -18,8 +18,6 @@ import io.openems.edge.meter.api.MeterType;
 	@AttributeDefinition(name = "Is enabled?", description = "Is this Component enabled?")
 	boolean enabled() default true;
 
-	@AttributeDefinition(name = "Is Hybrid System?", description = "Is this inverter part of an hybrid system?")
-	boolean hybrid() default false;
 	
 	@AttributeDefinition(name = "Meter-Type", description = "What is measured by this Meter?")
 	MeterType type() default MeterType.GRID;

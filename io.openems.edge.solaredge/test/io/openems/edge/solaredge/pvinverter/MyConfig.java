@@ -22,11 +22,11 @@ public class MyConfig extends AbstractComponentConfig implements Config {
 			this.id = id;
 			return this;
 		}
-		
+
 		public Builder setHybrid(boolean hybrid) {
 			this.hybrid = hybrid;
 			return this;
-		}		
+		}
 
 		public Builder setReadOnly(boolean readOnly) {
 			this.readOnly = readOnly;
@@ -69,8 +69,6 @@ public class MyConfig extends AbstractComponentConfig implements Config {
 		this.builder = builder;
 	}
 
-
-
 	@Override
 	public String modbus_id() {
 		return this.builder.modbusId;
@@ -92,8 +90,9 @@ public class MyConfig extends AbstractComponentConfig implements Config {
 	}
 
 	@Override
-	public boolean hybrid() {
-		return this.builder.hybrid;
+	public boolean readOnly() {
+		return this.builder.readOnly;
+
 	}
 
 }
