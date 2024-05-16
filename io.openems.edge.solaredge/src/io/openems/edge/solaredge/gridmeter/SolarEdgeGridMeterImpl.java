@@ -40,7 +40,6 @@ import io.openems.edge.common.taskmanager.Priority;
 import io.openems.edge.meter.api.ElectricityMeter;
 import io.openems.edge.meter.api.MeterType;
 
-
 @Designate(ocd = Config.class, factory = true)
 @Component(//
 		name = "SolarEdge.Grid-Meter", //
@@ -54,8 +53,8 @@ import io.openems.edge.meter.api.MeterType;
 		EdgeEventConstants.TOPIC_CYCLE_BEFORE_CONTROLLERS //
 })
 
-public class SolarEdgeGridMeterImpl extends AbstractSolarEdgeGridmeter implements SolarEdgeGridMeter, ElectricityMeter,
-		 ModbusComponent, OpenemsComponent, ModbusSlave, EventHandler {
+public class SolarEdgeGridMeterImpl extends AbstractSolarEdgeGridmeter
+		implements SolarEdgeGridMeter, ElectricityMeter, ModbusComponent, OpenemsComponent, ModbusSlave, EventHandler {
 
 	private static final Map<SunSpecModel, Priority> ACTIVE_MODELS = ImmutableMap.<SunSpecModel, Priority>builder()
 			.put(DefaultSunSpecModel.S_1, Priority.LOW) //
@@ -76,10 +75,10 @@ public class SolarEdgeGridMeterImpl extends AbstractSolarEdgeGridmeter implement
 				ModbusComponent.ChannelId.values(), //
 				ElectricityMeter.ChannelId.values(), //
 				SolarEdgeGridMeter.ChannelId.values());
-				this.addStaticModbusTasks(this.getModbusProtocol());
+		this.addStaticModbusTasks(this.getModbusProtocol());
 	}
 
-	private void addStaticModbusTasks(ModbusProtocol protocol)  {
+	private void addStaticModbusTasks(ModbusProtocol protocol) {
 		protocol.addTask(//
 				new FC3ReadRegistersTask(0x9D0E, Priority.HIGH, //
 
@@ -117,15 +116,11 @@ public class SolarEdgeGridMeterImpl extends AbstractSolarEdgeGridmeter implement
 			break;
 		}
 	}
-	
+
 	/**
 	 * Calculates ActivePower for nature ElectricityMeter.
 	 */
 	public void _calculateAndSetActivePower() {
-		// Aktuelle Erzeugung durch den Hybrid-WR ist der aktuelle Verbrauch +
-		// Batterie-Ladung/Entladung *-1
-		// Actual power from inverter comes from house consumption + battery inverter
-		// power (*-1)
 
 		int power = this.getPower().orElse(0); //
 		int powerScale = this.getPowerScale().orElse(0);
@@ -165,4 +160,3 @@ public class SolarEdgeGridMeterImpl extends AbstractSolarEdgeGridmeter implement
 						.build());
 	}
 }
-
