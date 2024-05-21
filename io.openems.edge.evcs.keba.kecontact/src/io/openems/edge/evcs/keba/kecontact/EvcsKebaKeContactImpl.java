@@ -217,8 +217,15 @@ public class EvcsKebaKeContactImpl extends AbstractManagedEvcsComponent
 		if (current < 6000) {
 			current = 0;
 		}
-		log.debug("Sende PowerLimit: " + current + "mA");
-		return this.send("currtime " + current + " 1");
+		log.info(">>>> kecontact/applyChargePowerLimit Sende PowerLimit: " + current + "mA fuer " + this.alias() );
+		// currtime sets allowed charge current (6A-63A) after delay (here: 1)
+		if (this.send("currtime " + current + " 1")) {
+			log.debug("\n-Erfolgreich gesendet");
+			return true;
+		}else {
+			log.debug("\n-Senden nicht erfolgreich");
+			return false;
+		}
 	}
 
 	@Override

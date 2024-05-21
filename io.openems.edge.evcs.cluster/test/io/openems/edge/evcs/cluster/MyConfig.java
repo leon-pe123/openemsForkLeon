@@ -84,10 +84,7 @@ public class MyConfig extends AbstractComponentConfig implements Config {
 		return this.builder.evcsIds;
 	}
 
-	@Override
-	public String ess_id() {
-		return this.builder.essId;
-	}
+
 
 	@Override
 	public String Evcs_target() {

@@ -36,11 +36,11 @@ public class ReadHandler implements Consumer<String> {
 	public void accept(String message) {
 
 		if (message.startsWith("TCH-OK")) {
-			this.log.debug("KEBA confirmed reception of command: TCH-OK");
+			this.log.info(this.parent.alias() +  "KEBA confirmed reception of command: TCH-OK");
 			this.parent.triggerQuery();
 
 		} else if (message.startsWith("TCH-ERR")) {
-			this.log.warn("KEBA reported command error: TCH-ERR");
+			this.log.warn(this.parent.alias() + "KEBA reported command error: TCH-ERR");
 			this.parent.triggerQuery();
 
 		} else {

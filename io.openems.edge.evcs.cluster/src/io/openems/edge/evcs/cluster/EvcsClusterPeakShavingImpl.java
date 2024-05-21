@@ -32,10 +32,7 @@ import io.openems.edge.common.event.EdgeEventConstants;
 import io.openems.edge.common.sum.Sum;
 import io.openems.edge.common.type.TypeUtils;
 import io.openems.edge.controller.api.Controller;
-import io.openems.edge.ess.api.ManagedSymmetricEss;
-import io.openems.edge.ess.api.SymmetricEss;
-import io.openems.edge.ess.power.api.Phase;
-import io.openems.edge.ess.power.api.Pwr;
+
 import io.openems.edge.evcs.api.ChargeState;
 import io.openems.edge.evcs.api.Evcs;
 import io.openems.edge.evcs.api.ManagedEvcs;
@@ -104,8 +101,7 @@ public class EvcsClusterPeakShavingImpl extends AbstractOpenemsComponent
 	@Reference
 	private Sum sum;
 
-	@Reference(policy = ReferencePolicy.STATIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.OPTIONAL)
-	private SymmetricEss ess;
+
 
 	@Reference
 	private ElectricityMeter meter;
@@ -151,11 +147,8 @@ public class EvcsClusterPeakShavingImpl extends AbstractOpenemsComponent
 			return;
 		}
 		
-		if (!this.config.ess_id().isEmpty()) {
-			if (OpenemsComponent.updateReferenceFilter(this.cm, this.servicePid(), "ess", config.ess_id())) {
-				return;
-			}
-		}
+
+		
 		if (OpenemsComponent.updateReferenceFilter(this.cm, this.servicePid(), "meter", config.meter_id())) {
 			return;
 		}
@@ -216,7 +209,11 @@ public class EvcsClusterPeakShavingImpl extends AbstractOpenemsComponent
 			return;
 		}
 		switch (event.getTopic()) {
-
+		case EdgeEventConstants.TOPIC_CYCLE_EXECUTE_WRITE:
+			this.calculateChannelValues();
+			this.limitEvcss();
+			break;			
+		
 		case EdgeEventConstants.TOPIC_CYCLE_AFTER_CONTROLLERS:
 			this.calculateChannelValues();
 			this.limitEvcss();
@@ -452,7 +449,7 @@ public class EvcsClusterPeakShavingImpl extends AbstractOpenemsComponent
 				 * Set the next charge power of the EVCS
 				 */
 				evcs.setChargePowerLimitWithFilter(nextChargePower);
-				this.logInfoInDebugmode("Next charge power: " + nextChargePower + "; Max charge power: "
+				this.logInfoInDebugmode("Cluster Next charge power: " + nextChargePower + "; Max charge power: "
 						+ maximumChargePower + "; Power left: " + totalPowerLeftMinusGuarantee);
 			}
 		} catch (OpenemsNamedException e) {
@@ -483,18 +480,11 @@ public class EvcsClusterPeakShavingImpl extends AbstractOpenemsComponent
 	 * @return Maximum Power in Watt
 	 */
 	public int getMaximumPowerToDistribute() {
-		int essDischargePower = 0;
-		int essActivePowerDC = 0;
-		
-		/**
-		 * If ESS is present calculate maximum power.
-		 */
-		if (!this.config.ess_id().isEmpty()) {
-			essDischargePower = this.sum.getEssActivePower().orElse(0);
-			essActivePowerDC = this.sum.getProductionDcActualPower().orElse(0);
-		}
 
-		var maxAvailableStoragePower = this.maxEssDischargePower - (essDischargePower - essActivePowerDC);
+		
+
+
+		var maxAvailableStoragePower = 0;
 		this.channel(EvcsClusterPeakShaving.ChannelId.MAXIMUM_AVAILABLE_ESS_POWER)
 				.setNextValue(maxAvailableStoragePower);
 
@@ -602,17 +592,8 @@ public class EvcsClusterPeakShavingImpl extends AbstractOpenemsComponent
 	@Override
 	public void run() throws OpenemsNamedException {
 		
-			if (!this.config.ess_id().isEmpty()) {
-			// Read maximum ESS Discharge power at the current position in the Cycle
-			if (this.ess instanceof ManagedSymmetricEss) {
-				var e = (ManagedSymmetricEss) this.ess;
-				this.maxEssDischargePower = e.getPower().getMaxPower(e, Phase.ALL, Pwr.ACTIVE);
 
-			} else {
-				this.maxEssDischargePower = this.ess.getMaxApparentPower().orElse(0);
-			}
-		}
-		 
+			this.maxEssDischargePower = 0;		 
 	}
 	
 	@Override
