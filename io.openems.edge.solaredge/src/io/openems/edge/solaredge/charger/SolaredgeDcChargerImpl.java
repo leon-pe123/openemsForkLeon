@@ -261,7 +261,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 
 		protocol.addTask(//
 				new FC3ReadRegistersTask(61441, Priority.HIGH,
-						m(SolaredgeDcCharger.ChannelId.ACTIVE_PV_POWER_LIMIT_PERCENT, new UnsignedWordElement(61441))));
+						m(SolaredgeDcCharger.ChannelId.POWER_PV_LIMIT_PERCENT, new UnsignedWordElement(61441))));
 
 		protocol.addTask(//
 				new FC3ReadRegistersTask(61762, Priority.HIGH, //
@@ -271,23 +271,23 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 
 		protocol.addTask(//
 				new FC3ReadRegistersTask(62212, Priority.HIGH, //
-						m(SolaredgeDcCharger.ChannelId.MAX_ACTIVE_PV_POWER_LIMIT,
+						m(SolaredgeDcCharger.ChannelId.MAX_ACTIVE_POWER_PV_LIMIT,
 								new FloatDoublewordElement(62212).wordOrder(WordOrder.LSWMSW)), // F304
-						m(SolaredgeDcCharger.ChannelId.MAX_REACTIVE_PV_POWER_LIMIT,
+						m(SolaredgeDcCharger.ChannelId.MAX_REACTIVE_POWER_PV_LIMIT,
 								new FloatDoublewordElement(62214).wordOrder(WordOrder.LSWMSW)) // F306
 				));
 
 		protocol.addTask(//
 				new FC3ReadRegistersTask(62220, Priority.HIGH, //
-						m(SolaredgeDcCharger.ChannelId.ACTIVE_PV_ACTIVE_POWER_LIMIT,
+						m(SolaredgeDcCharger.ChannelId.ACTIVE_POWER_PV_LIMIT,
 								new FloatDoublewordElement(62220).wordOrder(WordOrder.LSWMSW)), // F304
-						m(SolaredgeDcCharger.ChannelId.ACTIVE_PV_REACTIVE_POWER_LIMIT,
+						m(SolaredgeDcCharger.ChannelId.REACTIVE_POWER_PV_LIMIT,
 								new FloatDoublewordElement(62222).wordOrder(WordOrder.LSWMSW)) // F306
 				));
 
 		protocol.addTask(//
 				new FC3ReadRegistersTask(0xE170, Priority.HIGH, // battery-side (DC charge / discharge)
-						m(SolaredgeDcCharger.ChannelId.VOLTAGE_BATT_DC, // Instantaneous Voltage from Solaregde - no
+						m(SolaredgeDcCharger.ChannelId.DC_VOLTAGE_BATT, // Instantaneous Voltage from Solaregde - no
 																		// scaling
 								new FloatDoublewordElement(0xE170).wordOrder(WordOrder.LSWMSW)),
 						m(SolaredgeDcCharger.ChannelId.CURRENT_BATT_DC, // Instantaneous Current from Solaregde - no
@@ -308,9 +308,9 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 						m(SolaredgeDcCharger.ChannelId.CURRENT_DC_SCALE, //
 								new SignedWordElement(0x9CA1)),
 						// Voltage
-						m(SolaredgeDcCharger.ChannelId.VOLTAGE_DC, //
+						m(SolaredgeDcCharger.ChannelId.DC_VOLTAGE, //
 								new SignedWordElement(0x9CA2)),
-						m(SolaredgeDcCharger.ChannelId.VOLTAGE_DC_SCALE, //
+						m(SolaredgeDcCharger.ChannelId.DC_VOLTAGE_SCALE, //
 								new SignedWordElement(0x9CA3)),
 						// Power
 						m(SolaredgeDcCharger.ChannelId.DC_POWER, //
@@ -333,7 +333,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 			dcCurrentValue = dcCurrent * Math.pow(10, dcCurrentScale) * 1000; // Channel expects mA
 
 			// Battery
-			dcBattCurrent = this.getBattDcCurrent().getOrError() * 1000; // Channel expects mA. Negative while charging
+			dcBattCurrent = this.getDcCurrentBatt().getOrError() * 1000; // Channel expects mA. Negative while charging
 			if (lastDcCurrentScale == dcCurrentScale) {
 				this._setCurrent((int) dcCurrentValue + (dcBattCurrent * -1));
 			}
@@ -451,7 +451,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 
 		// Attempt to set the new power limit percentage and commit changes
 		try {
-			this.setPvPowerLimitPercent(newLimitPercent);
+			this.setPowerPvLimitPercent(newLimitPercent);
 			this.commitPvPowerLimit(1); // Send '1' to commit changes
 			this.logDebug(this.log, "New Power Limit set to: " + newLimitPercent + "%");
 
@@ -468,10 +468,10 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 	 */
 	@Override
 	public void _calculateAndSetPvPowerLimit(int maxPvPower) {
-		Integer maxActivePowerLimit = this.getMaxActivePvPowerLimit().get(); // max. hardware PV production power
+		Integer maxActivePowerLimit = this.getMaxActivePowerPvLimit().get(); // max. hardware PV production power
 		Integer currentPercent = this.getActivePvPowerLimitPercent().get(); // current PV production limit in percent
 
-		Integer currentPowerLimit = this.getActivePvActivePowerLimit().get(); // current PV production limit in watts
+		Integer currentPowerLimit = this.getActivePowerPvLimit().get(); // current PV production limit in watts
 
 		this.logDebug(this.log, "Limit Wanted: " + maxPvPower + "W");
 
@@ -521,7 +521,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 
 		// Attempt to set the new power limit percentage and commit changes
 		try {
-			this.setPvPowerLimitPercent(newLimitPercent);
+			this.setPowerPvLimitPercent(newLimitPercent);
 			this.commitPvPowerLimit(1); // Send '1' to commit changes
 			this.logDebug(this.log, "New Power Limit set to: " + newLimitPercent + "%");
 			this.isLimiting = true;			
@@ -539,7 +539,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 					+ cycleDebugMsg + "|DC Power:" + (int) this.dcPowerValue + "|DC DisCharge Power:"
 					+ (int) this.dcDischargePower + "|DC PvProduction Power:" + this.pvDcProduction + "|Avg Power:"
 					+ this.pvDcProductionAverageCalculator.getAverage() + "|Actual Power:"
-					+ this.getActualPower().asString() + "|Power Limit:" + this.getActivePvActivePowerLimit()
+					+ this.getActualPower().asString() + "|Power Limit:" + this.getActivePowerPvLimit()
 
 			;
 
