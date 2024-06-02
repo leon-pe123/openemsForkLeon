@@ -90,7 +90,7 @@ public class EvcsClusterPeakShavingImpl extends AbstractOpenemsComponent
 	private Integer lastLimit = null;
 
 	// The maximum discharge power of the energy storage system
-	private int maxEssDischargePower = 0;
+	//private int maxEssDischargePower = 0;
 
 	@Reference
 	private ConfigurationAdmin cm;
@@ -593,7 +593,7 @@ public class EvcsClusterPeakShavingImpl extends AbstractOpenemsComponent
 	public void run() throws OpenemsNamedException {
 		
 
-			this.maxEssDischargePower = 0;		 
+			//this.maxEssDischargePower = 0;		 
 	}
 	
 	@Override

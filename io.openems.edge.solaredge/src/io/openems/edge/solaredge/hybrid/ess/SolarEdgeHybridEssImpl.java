@@ -42,22 +42,23 @@ import io.openems.edge.bridge.modbus.api.task.FC16WriteRegistersTask;
 import io.openems.edge.bridge.modbus.api.task.FC3ReadRegistersTask;
 import io.openems.edge.bridge.modbus.sunspec.DefaultSunSpecModel;
 import io.openems.edge.bridge.modbus.sunspec.SunSpecModel;
-import io.openems.edge.common.channel.EnumReadChannel;
 
+import io.openems.edge.common.channel.EnumReadChannel;
 import io.openems.edge.common.component.ComponentManager;
 import io.openems.edge.common.component.OpenemsComponent;
 import io.openems.edge.common.modbusslave.ModbusSlave;
 import io.openems.edge.common.modbusslave.ModbusSlaveTable;
 import io.openems.edge.common.taskmanager.Priority;
 import io.openems.edge.common.type.TypeUtils;
+
 import io.openems.edge.controller.ess.limittotaldischarge.ControllerEssLimitTotalDischarge;
 import io.openems.edge.controller.ess.emergencycapacityreserve.ControllerEssEmergencyCapacityReserve;
-
 import io.openems.edge.ess.api.HybridEss;
 import io.openems.edge.ess.api.ManagedSymmetricEss;
 import io.openems.edge.ess.api.SymmetricEss;
 //import io.openems.edge.ess.dccharger.api.EssDcCharger;
 import io.openems.edge.ess.power.api.Power;
+
 import io.openems.edge.meter.api.ElectricityMeter;
 import io.openems.edge.pvinverter.api.ManagedSymmetricPvInverter;
 import io.openems.edge.solaredge.enums.ControlMode;
@@ -69,7 +70,6 @@ import io.openems.edge.solaredge.enums.AcChargePolicy;
 import io.openems.edge.solaredge.enums.ChargeDischargeMode;
 import io.openems.edge.solaredge.charger.SolaredgeDcCharger;
 import io.openems.edge.solaredge.common.AverageCalculator;
-
 
 @Designate(ocd = Config.class, factory = true)
 @Component(//
@@ -356,22 +356,21 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		}
 
 		int pvPowerSetPoint = currentPvProductionPower; // initial SetPoint
-		
 
 		// If limitation is active we have to control the limitation.
 		// Reason: If feed to grid exceeds limit we have to decrease limitation, too.
 		if (gridPower != null && feedToGridPowerLimit != null && -gridPower > feedToGridPowerLimit
 				|| this.charger.getPvMode() == PvMode.LIMIT_ACTIVE) {
 			feedToGridAverageCalculator.addValue(gridPower);
-			
+
 			int feedToGrid = feedToGridAverageCalculator.getAverage(); // negative value
 			int pvProduction = pvProductionAverageCalculator.getAverage();
-			
-			pvPowerSetPoint = pvProduction + feedToGrid + feedToGridPowerLimit
-					- tolerance;
 
-			this.logDebug(this.log, String.format("PV Setpoint Adjustment: FeedToGridAvg: %d ProductionAvg: %d, , Adjusted: %d",
-					feedToGrid, pvProduction, pvPowerSetPoint));
+			pvPowerSetPoint = pvProduction + feedToGrid + feedToGridPowerLimit - tolerance;
+
+			this.logDebug(this.log,
+					String.format("PV Setpoint Adjustment: FeedToGridAvg: %d ProductionAvg: %d, , Adjusted: %d",
+							feedToGrid, pvProduction, pvPowerSetPoint));
 
 			pvPowerSetPoint = Math.min(pvPowerSetPoint, maxPvProductionPowerLimit);
 
@@ -449,7 +448,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	private void setChargeDischargeModes() throws OpenemsNamedException {
 		this.setControlMode(ControlMode.SE_CTRL_MODE_REMOTE); // enable device' remote control mode
 		this.setAcChargePolicy(AcChargePolicy.SE_CHARGE_DISCHARGE_MODE_ALWAYS); // Allows charging/discharging on
-																					// AC-side
+																				// AC-side
 
 		// If modes fail - go back to automatic mode after 60 seconds
 		if (!isControlModeRemote() || !isStorageChargePolicyAlways()) {
@@ -654,6 +653,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	}
 
 	public void _setMyActivePower() {
+
 		// ActivePower is the actual AC output including battery discharging
 		int acPower = this.getAcPower().orElse(0);
 		int acPowerScale = this.getAcPowerScale().orElse(0);
@@ -917,6 +917,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	protected void onSunSpecInitializationCompleted() {
 		// TODO Add mappings for registers from S1 and S103
 		if (DEBUG_MODE == false) {
+
 			this.mapFirstPointToChannel(//
 					ManagedSymmetricPvInverter.ChannelId.MAX_APPARENT_POWER, //
 					ElementToChannelConverter.DIRECT_1_TO_1, //
@@ -929,10 +930,14 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 			 */
 
 			this.mapFirstPointToChannel(//
+					SolarEdgeHybridEss.ChannelId.APPARENT_POWER, //
+					ElementToChannelConverter.DIRECT_1_TO_1, //
+					DefaultSunSpecModel.S103.VA);
+
+			this.mapFirstPointToChannel(//
 					SymmetricEss.ChannelId.REACTIVE_POWER, //
 					ElementToChannelConverter.DIRECT_1_TO_1, //
 					DefaultSunSpecModel.S103.V_AR);
-			this.setLimits();
 
 			this.mapFirstPointToChannel(//
 					SymmetricEss.ChannelId.ACTIVE_DISCHARGE_ENERGY, //
@@ -940,6 +945,38 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 					DefaultSunSpecModel.S103.WH); // 103.WH holds value for lifetime production (battery + pv).
 													// Remember:
 													// battery can also be loaded from AC/grid
+
+			this.mapFirstPointToChannel(//
+					SolarEdgeHybridEss.ChannelId.VOLTAGE_L1, //
+					ElementToChannelConverter.DIRECT_1_TO_1, //
+					DefaultSunSpecModel.S103.PH_VPH_A);
+
+			this.mapFirstPointToChannel(//
+					SolarEdgeHybridEss.ChannelId.VOLTAGE_L2, //
+					ElementToChannelConverter.DIRECT_1_TO_1, //
+					DefaultSunSpecModel.S103.PH_VPH_B);
+
+			this.mapFirstPointToChannel(//
+					SolarEdgeHybridEss.ChannelId.VOLTAGE_L3, //
+					ElementToChannelConverter.DIRECT_1_TO_1, //
+					DefaultSunSpecModel.S103.PH_VPH_C);
+
+			this.mapFirstPointToChannel(//
+					SolarEdgeHybridEss.ChannelId.CURRENT_L1, //
+					ElementToChannelConverter.DIRECT_1_TO_1, //
+					DefaultSunSpecModel.S103.APH_A);
+
+			this.mapFirstPointToChannel(//
+					SolarEdgeHybridEss.ChannelId.CURRENT_L2, //
+					ElementToChannelConverter.DIRECT_1_TO_1, //
+					DefaultSunSpecModel.S103.APH_B);
+
+			this.mapFirstPointToChannel(//
+					SolarEdgeHybridEss.ChannelId.CURRENT_L3, //
+					ElementToChannelConverter.DIRECT_1_TO_1, //
+					DefaultSunSpecModel.S103.APH_C);
+
+			this.setLimits();
 
 		}
 

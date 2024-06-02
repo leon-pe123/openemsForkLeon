@@ -103,6 +103,20 @@ public interface SolarEdgeHybridEss extends OpenemsComponent {
 				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**
+		 * Apparent power
+		 *
+		 * <ul>
+		 * <li>Interface: Ess
+		 * <li>Type: Integer
+		 * <li>Unit: Volt Ampere
+		 * <li>
+		 * </ul>
+		 */
+		APPARENT_POWER(Doc.of(OpenemsType.INTEGER) //
+				.unit(Unit.VOLT_AMPERE) //
+				.persistencePriority(PersistencePriority.HIGH)),
+
+		/**
 		 * Actual Current to or from the battery .
 		 *
 		 * <ul>
@@ -297,6 +311,48 @@ public interface SolarEdgeHybridEss extends OpenemsComponent {
 		 * 
 		 */
 		SET_CONTROL_MODE(Doc.of(ControlMode.values()).accessMode(AccessMode.WRITE_ONLY)),
+
+		/**
+		 * AC-Current L1 produced by the ESS. Either for grid or consumption.
+		 * Always positive.
+		 * <ul>
+		 * <li>Interface: Ess
+		 * <li>Type: Integer
+		 * <li>Unit: A
+		 * <li>
+		 * </ul>
+		 */
+		CURRENT_L1(Doc.of(OpenemsType.INTEGER) //
+				.unit(Unit.AMPERE) //
+				.persistencePriority(PersistencePriority.LOW)),
+
+		/**
+		 * AC-Current L2 produced by the ESS. Either for grid or consumption.
+		 * Always positive.
+		 * <ul>
+		 * <li>Interface: Ess
+		 * <li>Type: Integer
+		 * <li>Unit: A
+		 * <li>
+		 * </ul>
+		 */
+		CURRENT_L2(Doc.of(OpenemsType.INTEGER) //
+				.unit(Unit.AMPERE) //
+				.persistencePriority(PersistencePriority.LOW)),
+
+		/**
+		 * AC-Current L3 produced by the ESS. Either for grid or consumption.
+		 * Always positive.
+		 * <ul>
+		 * <li>Interface: Ess
+		 * <li>Type: Integer
+		 * <li>Unit: A
+		 * <li>
+		 * </ul>
+		 */
+		CURRENT_L3(Doc.of(OpenemsType.INTEGER) //
+				.unit(Unit.AMPERE) //
+				.persistencePriority(PersistencePriority.LOW)),
 
 		/**
 		 * Power from Grid. Used ie. to calculate pv production.
@@ -606,7 +662,48 @@ public interface SolarEdgeHybridEss extends OpenemsComponent {
 		 */
 		USEABLE_SOC(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.PERCENT) //
-				.persistencePriority(PersistencePriority.HIGH))
+				.persistencePriority(PersistencePriority.HIGH)),
+		/**
+		 * AC-Current L1 produced by the ESS. Either for grid or consumption.
+		 *
+		 * <ul>
+		 * <li>Interface: Ess
+		 * <li>Type: Integer
+		 * <li>Unit: A
+		 * <li>
+		 * </ul>
+		 */
+		VOLTAGE_L1(Doc.of(OpenemsType.INTEGER) //
+				.unit(Unit.VOLT) //
+				.persistencePriority(PersistencePriority.LOW)),
+
+		/**
+		 * AC-Current L2 produced by the ESS. Either for grid or consumption.
+		 *
+		 * <ul>
+		 * <li>Interface: Ess
+		 * <li>Type: Integer
+		 * <li>Unit: A
+		 * <li>
+		 * </ul>
+		 */
+		VOLTAGE_L2(Doc.of(OpenemsType.INTEGER) //
+				.unit(Unit.VOLT) //
+				.persistencePriority(PersistencePriority.LOW)),
+
+		/**
+		 * AC-Current L3 produced by the ESS. Either for grid or consumption.
+		 *
+		 * <ul>
+		 * <li>Interface: Ess
+		 * <li>Type: Integer
+		 * <li>Unit: A
+		 * <li>
+		 * </ul>
+		 */
+		VOLTAGE_L3(Doc.of(OpenemsType.INTEGER) //
+				.unit(Unit.VOLT) //
+				.persistencePriority(PersistencePriority.LOW)),
 
 		;
 
@@ -831,6 +928,60 @@ public interface SolarEdgeHybridEss extends OpenemsComponent {
 	 */
 	public default ControlMode getControlMode() {
 		return this.getControlModeChannel().value().asEnum();
+	}
+
+	/**
+	 * Gets the Channel for {@link ChannelId#CURRENT_L1}.
+	 *
+	 * @return the Channel
+	 */
+	public default IntegerReadChannel getCurrentL1Channel() {
+		return this.channel(ChannelId.CURRENT_L1);
+	}
+
+	/**
+	 * See {@link ChannelId#CURRENT_L1}.
+	 *
+	 * @return the Channel {@link Value}
+	 */
+	public default Value<Integer> getCurrentL1() {
+		return this.getCurrentL1Channel().value();
+	}
+
+	/**
+	 * Gets the Channel for {@link ChannelId#CURRENT_L2}.
+	 *
+	 * @return the Channel
+	 */
+	public default IntegerReadChannel getCurrentL2Channel() {
+		return this.channel(ChannelId.CURRENT_L2);
+	}
+
+	/**
+	 * See {@link ChannelId#CURRENT_L2}.
+	 *
+	 * @return the Channel {@link Value}
+	 */
+	public default Value<Integer> getCurrentL2() {
+		return this.getCurrentL2Channel().value();
+	}
+
+	/**
+	 * Gets the Channel for {@link ChannelId#CURRENT_L3}.
+	 *
+	 * @return the Channel
+	 */
+	public default IntegerReadChannel getCurrentL3Channel() {
+		return this.channel(ChannelId.CURRENT_L3);
+	}
+
+	/**
+	 * See {@link ChannelId#CURRENT_L3}.
+	 *
+	 * @return the Channel {@link Value}
+	 */
+	public default Value<Integer> getCurrentL3() {
+		return this.getCurrentL3Channel().value();
 	}
 
 	/**
@@ -1272,6 +1423,60 @@ public interface SolarEdgeHybridEss extends OpenemsComponent {
 	 */
 	public default void setUseableSoc(int value) {
 		this.getUseableSocChannel().setNextValue(value);
+	}
+
+	/**
+	 * Gets the Channel for {@link ChannelId#VOLTAGE_L1}.
+	 *
+	 * @return the Channel
+	 */
+	public default IntegerReadChannel getVoltageL1Channel() {
+		return this.channel(ChannelId.VOLTAGE_L1);
+	}
+
+	/**
+	 * See {@link ChannelId#VOLTAGE_L1}.
+	 *
+	 * @return the Channel {@link Value}
+	 */
+	public default Value<Integer> getVoltageL1() {
+		return this.getVoltageL1Channel().value();
+	}
+
+	/**
+	 * Gets the Channel for {@link ChannelId#VOLTAGE_L2}.
+	 *
+	 * @return the Channel
+	 */
+	public default IntegerReadChannel getVoltageL2Channel() {
+		return this.channel(ChannelId.VOLTAGE_L2);
+	}
+
+	/**
+	 * See {@link ChannelId#VOLTAGE_L2}.
+	 *
+	 * @return the Channel {@link Value}
+	 */
+	public default Value<Integer> getVoltageL2() {
+		return this.getVoltageL2Channel().value();
+	}
+
+	/**
+	 * Gets the Channel for {@link ChannelId#VOLTAGE_L3}.
+	 *
+	 * @return the Channel
+	 */
+	public default IntegerReadChannel getVoltageL3Channel() {
+		return this.channel(ChannelId.VOLTAGE_L3);
+	}
+
+	/**
+	 * See {@link ChannelId#VOLTAGE_L3}.
+	 *
+	 * @return the Channel {@link Value}
+	 */
+	public default Value<Integer> getVoltageL3() {
+		return this.getVoltageL3Channel().value();
 	}
 
 	/**
