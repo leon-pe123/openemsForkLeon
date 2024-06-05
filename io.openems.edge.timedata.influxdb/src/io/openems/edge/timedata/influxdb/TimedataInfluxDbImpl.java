@@ -27,6 +27,7 @@ import com.google.gson.JsonElement;
 import com.influxdb.client.domain.WritePrecision;
 import com.influxdb.client.write.Point;
 
+
 import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
 import io.openems.common.oem.OpenemsEdgeOem;
 import io.openems.common.timedata.Resolution;
@@ -138,6 +139,10 @@ public class TimedataInfluxDbImpl extends AbstractOpenemsComponent
 							case READ_WRITE:
 								break;
 							}
+							
+							if (!channel.channelDoc().getPersistencePriority().isAtLeast(config.persistencePriority())) {
+								return;
+							}							
 
 							Optional<?> valueOpt = channel.value().asOptional();
 							if (!valueOpt.isPresent()) {

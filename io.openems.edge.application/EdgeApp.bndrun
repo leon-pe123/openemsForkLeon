@@ -276,7 +276,6 @@
 	org.apache.felix.configadmin;version='[1.9.26,1.9.27)',\
 	org.apache.felix.eventadmin;version='[1.6.4,1.6.5)',\
 	org.apache.felix.fileinstall;version='[3.7.4,3.7.5)',\
-	org.apache.felix.http.jetty;version='[5.1.12,5.1.13)',\
 	org.apache.felix.http.servlet-api;version='[3.0.0,3.0.1)',\
 	org.apache.felix.inventory;version='[2.0.0,2.0.1)',\
 	org.apache.felix.metatype;version='[1.2.4,1.2.5)',\
@@ -284,7 +283,6 @@
 	org.apache.felix.webconsole;version='[5.0.2,5.0.3)',\
 	org.apache.felix.webconsole.plugins.ds;version='[2.3.0,2.3.1)',\
 	org.eclipse.paho.mqttv5.client;version='[1.2.5,1.2.6)',\
-	org.jetbrains.kotlin.osgi-bundle;version='[1.9.24,1.9.25)',\
 	org.jsr-305;version='[3.0.2,3.0.3)',\
 	org.openmuc.jmbus;version='[3.3.0,3.3.1)',\
 	org.openmuc.jrxtx;version='[1.0.1,1.0.2)',\
@@ -304,4 +302,6 @@
 	io.openems.edge.meter.janitza;version=snapshot,\
 	io.openems.edge.solaredge;version=snapshot,\
 	io.openems.edge.batteryinverter.sunspec;version=snapshot,\
-	io.openems.edge.io.filipowski;version=snapshot
+	io.openems.edge.io.filipowski;version=snapshot,\
+	org.apache.felix.http.jetty;version='[5.1.14,5.1.15)',\
+	org.jetbrains.kotlin.osgi-bundle;version='[2.0.0,2.0.1)'
