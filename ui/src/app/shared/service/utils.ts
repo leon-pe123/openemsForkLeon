@@ -12,6 +12,8 @@ import { ChannelAddress, Currency, EdgeConfig } from '../shared';
 
 export class Utils {
 
+
+
   constructor() { }
 
   /**
@@ -478,6 +480,45 @@ export class Utils {
     return result;
   }
 
+
+  /**
+      Calculates the CO2 emissions saved based on the generated and consumed energy.
+      @param productionActiveEnergy The total generated energy from renewable sources (in kWh)
+      @param selfConsumptionRate The self-consumption rate (as a fraction, e.g., 0.49 for 49%)
+      @param sellToGrid The energy fed into the grid (in kWh)
+      @param co2Factor The CO2 emission factor (in kg CO2 per kWh)
+      @returns The amount of CO2 emissions saved (in kg) or null if no production
+  */
+  public static calculateCO2EmissionsSaved(productionActiveEnergy: number, selfConsumptionRate: number, sellToGrid: number, co2Factor: number): number | null {
+    if (productionActiveEnergy == null || selfConsumptionRate == null || sellToGrid == null || co2Factor == null) {
+      return null;
+    }
+
+    if (productionActiveEnergy <= 0) {
+      return null;
+    }
+
+    // Self-consumed energy
+    const selfConsumedEnergy = productionActiveEnergy * selfConsumptionRate;
+
+
+    // CO2 emissions saved is based only on the self-consumed energy
+    const co2EmissionsSaved = selfConsumedEnergy * co2Factor;
+
+    return co2EmissionsSaved;
+
+  }
+
+  static calculateTreesPlanted(co2EmissionsSaved: number): number {
+    if (co2EmissionsSaved == null) {
+      return;
+    }
+    const treesPerCo2kg: number = 0.029845;
+    const treesPlanted = co2EmissionsSaved * treesPerCo2kg;
+    return treesPlanted;
+  }
+
+
   /**
    * Calculate the Autarchy Rate
    *
@@ -847,3 +888,4 @@ export namespace TimeOfUseTariffUtils {
     return isSmartphoneResolution ? window.innerHeight / 3 : window.innerHeight / 4;
   }
 }
+
