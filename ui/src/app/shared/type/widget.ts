@@ -5,6 +5,7 @@ import { EdgeConfig } from '../edge/edgeconfig';
 export enum WidgetClass {
     'Energymonitor',
     'Common_Autarchy',
+    'Common_SavedEmissions',
     'Common_Selfconsumption',
     'Storage',
     'Grid',
@@ -63,6 +64,7 @@ export class Widgets {
                 }
                 switch (clazz) {
                     case 'Common_Autarchy':
+                    case 'Common_SavedEmissions':
                     case 'Grid':
                         return config.hasMeter();
                     case 'Energymonitor':

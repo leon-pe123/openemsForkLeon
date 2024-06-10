@@ -27,7 +27,7 @@ addIcons({
   'oe-offgrid': 'assets/img/icon/offgrid.svg',
   'oe-production': 'assets/img/icon/production.svg',
   'oe-storage': 'assets/img/icon/storage.svg',
-  'oe-co2': 'assets/img/icon/co2.svg',
+  'oe-tree': 'assets/img/icon/tree.svg',
 });
 
 export class EdgePermission {

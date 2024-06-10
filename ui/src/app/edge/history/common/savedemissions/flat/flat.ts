@@ -12,7 +12,7 @@ export class FlatComponent extends AbstractFlatWidget {
   protected selfconsumptionValue: number | null;
   protected co2EmissionsSaved: number | null;
   protected treesPlanted: number | null;
-  protected CO2Factor = 1;
+  protected CO2Factor = 0.4;
 
   protected override onCurrentData(currentData: CurrentData) {
     // Convert Wh to kWh

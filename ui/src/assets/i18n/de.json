@@ -29,6 +29,7 @@
       },
       "Widgets": {
         "autarchyInfo": "Die Autarkie gibt an zu wie viel Prozent die aktuell genutzte Leistung durch Erzeugung und Speicherentladung gedeckt wird.",
+        "savedemissionsInfo": "Gibt die, durch Eigenverbrauch eingesparten, CO2-Mangen an.",
         "phasesInfo": "Die Summe der einzelnen Phasen kann aus technischen Gründen geringfügig von der Gesamtsumme abweichen.",
         "selfconsumptionInfo": "Der Eigenverbrauch gibt an zu wie viel Prozent die aktuell erzeugte Leistung durch direkten Verbrauch und durch Speicherbeladung selbst genutzt wird.",
         "twoWayInfoGrid": "Negative Werte entsprechen Netzeinspeisung, Positive Werte entsprechen Netzbezug",
@@ -450,6 +451,7 @@
     "ALL": "Alle",
     "apply": "Übernehmen",
     "autarchy": "Autarkie",
+    "savedEmissions": "Eingesparte Emmissionen",
     "automatic": "Automatisch",
     "cancel": "abbrechen",
     "capacity": "Kapazität",
@@ -461,6 +463,7 @@
     "componentInactive": "Komponente ist inaktiv!",
     "connectionLost": "Verbindung unterbrochen. Versuche die Verbindung wiederherzustellen.",
     "consumption": "Verbrauch",
+    "co2EmissionsSaved": "CO2 gespart",
     "cumulative": "Kumulierte Werte",
     "currentName": "Aktueller Name",
     "currentValue": "Aktueller Wert",
@@ -511,6 +514,7 @@
     "SYSTEM_STATE": "Systemstatus",
     "TOTAL": "Gesamt",
     "totalState": "Gesamtstatus",
+    "TreesPlanted": "Bäume gepflanzt",
     "warning": "Warnung",
     "Week": {
       "monday": "Montag",

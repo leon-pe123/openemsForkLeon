@@ -451,7 +451,7 @@ export class Utils {
     saveAs(data, filename + '.xlsx');
   }
 
-  /*
+  /**
   * Calculate the Self-Consumption rate.
   *
   * @param sellToGrid the Sell-To-Grid power (i.e. the inverted GridActivePower)
@@ -482,15 +482,22 @@ export class Utils {
 
 
   /**
-      Calculates the CO2 emissions saved based on the generated and consumed energy.
-      @param productionActiveEnergy The total generated energy from renewable sources (in kWh)
-      @param selfConsumptionRate The self-consumption rate (as a fraction, e.g., 0.49 for 49%)
-      @param sellToGrid The energy fed into the grid (in kWh)
-      @param co2Factor The CO2 emission factor (in kg CO2 per kWh)
-      @returns The amount of CO2 emissions saved (in kg) or null if no production
+   *   Calculates the CO2 emissions saved based on the generated and consumed energy.
+   *   @param productionActiveEnergy The total generated energy from renewable sources (in kWh)
+   *   @param selfConsumptionRate The self-consumption rate (as a fraction, e.g., 0.49 for 49%)
+   *   @param sellToGrid The energy fed into the grid (in kWh)
+   *   @param co2Factor The CO2 emission factor (in kg CO2 per kWh)
+   *   @returns The amount of CO2 emissions saved (in kg) or null if no production
   */
   public static calculateCO2EmissionsSaved(productionActiveEnergy: number, selfConsumptionRate: number, sellToGrid: number, co2Factor: number): number | null {
     if (productionActiveEnergy == null || selfConsumptionRate == null || sellToGrid == null || co2Factor == null) {
+      console.log('Invalid input(s):', {
+        productionActiveEnergy,
+        selfConsumptionRate,
+        sellToGrid,
+        co2Factor,
+      });
+
       return null;
     }
 
@@ -498,16 +505,45 @@ export class Utils {
       return null;
     }
 
+
+
+
     // Self-consumed energy
     const selfConsumedEnergy = productionActiveEnergy * selfConsumptionRate;
 
 
     // CO2 emissions saved is based only on the self-consumed energy
     const co2EmissionsSaved = selfConsumedEnergy * co2Factor;
-
+    console.log('Inputs(s):', {
+      productionActiveEnergy,
+      selfConsumptionRate,
+      sellToGrid,
+      co2Factor,
+      co2EmissionsSaved,
+    });
     return co2EmissionsSaved;
 
   }
+
+  /**
+   * Converts a value in kilo grams [kg] to tons [t]
+   *
+   * @param value the value from passed value in html
+   * @returns converted value
+   */
+  public static CONVERT_TO_TONS = (value: any): string => {
+    return formatNumber(Utils.divideSafely(value, 1000), 'de', '1.0-1') + ' t';
+  };
+
+  /**
+   * Converts a value in kilo grams [kg] to tons [t]
+   *
+   * @param value the value from passed value in html
+   * @returns converted value
+   */
+  public static FORMAT_TO_KILO_GRAMS = (value: any): string => {
+    return formatNumber(Utils.roundSafely(value), 'de', '1.0-1') + ' kg';
+  };
 
   static calculateTreesPlanted(co2EmissionsSaved: number): number {
     if (co2EmissionsSaved == null) {
@@ -515,7 +551,8 @@ export class Utils {
     }
     const treesPerCo2kg: number = 0.029845;
     const treesPlanted = co2EmissionsSaved * treesPerCo2kg;
-    return treesPlanted;
+    console.log(treesPlanted);
+    return this.roundSafely(treesPlanted);
   }
 
 
