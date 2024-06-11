@@ -41,7 +41,9 @@ import io.openems.common.channel.AccessMode;
 import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
 import io.openems.edge.bridge.http.api.BridgeHttp;
 import io.openems.edge.bridge.http.api.BridgeHttpFactory;
+import io.openems.edge.bridge.http.api.HttpError;
 import io.openems.edge.bridge.http.api.HttpMethod;
+import io.openems.edge.bridge.http.api.HttpResponse;
 import io.openems.edge.common.component.AbstractOpenemsComponent;
 import io.openems.edge.common.component.OpenemsComponent;
 import io.openems.edge.common.event.EdgeEventConstants;
@@ -65,8 +67,8 @@ import io.openems.edge.timedata.api.utils.CalculateEnergyFromPower;
 		})
 
 @EventTopics({ //
-	EdgeEventConstants.TOPIC_CYCLE_AFTER_PROCESS_IMAGE, //
-	EdgeEventConstants.TOPIC_CYCLE_BEFORE_CONTROLLERS //
+		EdgeEventConstants.TOPIC_CYCLE_AFTER_PROCESS_IMAGE, //
+		EdgeEventConstants.TOPIC_CYCLE_BEFORE_CONTROLLERS //
 })
 
 public class OpendtuImpl extends AbstractOpenemsComponent implements Opendtu, ElectricityMeter, OpenemsComponent,
@@ -77,7 +79,6 @@ public class OpendtuImpl extends AbstractOpenemsComponent implements Opendtu, El
 	@Reference()
 	private BridgeHttpFactory httpBridgeFactory;
 	private BridgeHttp httpBridge;
-
 
 	@Reference(policy = ReferencePolicy.STATIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.MANDATORY)
 	private volatile Timedata timedata = null;
@@ -130,6 +131,8 @@ public class OpendtuImpl extends AbstractOpenemsComponent implements Opendtu, El
 			this.inverterDataMap.put(inverter.getSerialNumber(), inverter);
 			String inverterStatusUrl = "/api/livedata/status?inv=" + inverter.getSerialNumber();
 			if (this.isEnabled()) {
+				// this.httpBridge.subscribeJsonEveryCycle(this.baseUrl + inverterStatusUrl,
+				// this::processHttpResult);
 				this.httpBridge.subscribeJsonEveryCycle(this.baseUrl + inverterStatusUrl, this::processHttpResult);
 			}
 		}
@@ -182,7 +185,12 @@ public class OpendtuImpl extends AbstractOpenemsComponent implements Opendtu, El
 				.exceptionally(ex -> this.handlePowerLimitError(inverter, ex));
 	}
 
-	private void processLimitStatusUpdate(JsonElement responseJson, Throwable error) {
+	private void processLimitStatusUpdate(HttpResponse<JsonElement> responseJson, HttpError error) {
+		if (error != null) {
+			log.error("HTTP Error during data fetch: " + error.getMessage());
+			return;
+		}
+		
 		this._setSlaveCommunicationFailed(responseJson == null);
 
 		JsonObject inverterLimitInfo = null;
@@ -192,13 +200,11 @@ public class OpendtuImpl extends AbstractOpenemsComponent implements Opendtu, El
 		String limitAdjustmentStatus = null;
 		InverterData inverterData = null;
 
-		if (error != null) {
-			this.logDebug(this.log, error.getMessage());
-			return;
-		}
 
 		try {
-			var response = getAsJsonObject(responseJson);
+			
+			JsonObject response = responseJson.data().getAsJsonObject();			
+			
 
 			for (Map.Entry<String, JsonElement> entry : response.entrySet()) {
 				inverterSerialNumber = entry.getKey();
@@ -250,7 +256,11 @@ public class OpendtuImpl extends AbstractOpenemsComponent implements Opendtu, El
 		return null;
 	}
 
-	private void processHttpResult(JsonElement result, Throwable error) {
+	private void processHttpResult(HttpResponse<JsonElement> result, HttpError error) {
+		if (error != null) {
+			log.error("HTTP Error during data fetch: " + error.getMessage());
+			return;
+		}
 		this._setSlaveCommunicationFailed(result == null);
 
 		Integer power = null;
@@ -265,51 +275,47 @@ public class OpendtuImpl extends AbstractOpenemsComponent implements Opendtu, El
 		Integer limitHardware = null;
 		InverterData inverterData = null;
 
-		if (error != null) {
-			this.logDebug(this.log, error.getMessage());
-		} else {
-			try {
-				var response = getAsJsonObject(result);
+		try {
+			JsonObject response = result.data().getAsJsonObject();
 
-				var totalObject = getAsJsonObject(response, "total");
-				var totalPowerObject = getAsJsonObject(totalObject, "Power");
-				totalPower = round(getAsFloat(totalPowerObject, "v"));
+			var totalObject = getAsJsonObject(response, "total");
+			var totalPowerObject = getAsJsonObject(totalObject, "Power");
+			totalPower = round(getAsFloat(totalPowerObject, "v"));
 
-				var invertersArray = getAsJsonArray(response, "inverters");
-				var inverterResponse = getAsJsonObject(invertersArray.get(0));
-				serialNumber = getAsString(inverterResponse, "serial");
+			var invertersArray = getAsJsonArray(response, "inverters");
+			var inverterResponse = getAsJsonObject(invertersArray.get(0));
+			serialNumber = getAsString(inverterResponse, "serial");
 
-				powerLimitPerPhaseAbsolute = round(getAsFloat(inverterResponse, "limit_absolute"));
-				powerLimitPerPhaseRelative = round(getAsFloat(inverterResponse, "limit_relative"));
+			powerLimitPerPhaseAbsolute = round(getAsFloat(inverterResponse, "limit_absolute"));
+			powerLimitPerPhaseRelative = round(getAsFloat(inverterResponse, "limit_relative"));
 
-				limitHardware = (int) Math.round(powerLimitPerPhaseAbsolute * (100.0 / powerLimitPerPhaseRelative)); // Calculate
+			limitHardware = (int) Math.round(powerLimitPerPhaseAbsolute * (100.0 / powerLimitPerPhaseRelative)); // Calculate
 
-				this.logDebug(this.log, "Current Limit for [" + serialNumber + "] :" + powerLimitPerPhaseAbsolute
-						+ "W / " + powerLimitPerPhaseRelative + "% HardwareLimit: " + limitHardware + "W");
+			this.logDebug(this.log, "Current Limit for [" + serialNumber + "] :" + powerLimitPerPhaseAbsolute + "W / "
+					+ powerLimitPerPhaseRelative + "% HardwareLimit: " + limitHardware + "W");
 
-				// AC data
-				var acData = getAsJsonObject(inverterResponse, "AC");
-				var ac0Data = getAsJsonObject(acData, "0");
+			// AC data
+			var acData = getAsJsonObject(inverterResponse, "AC");
+			var ac0Data = getAsJsonObject(acData, "0");
 
-				var powerObj = getAsJsonObject(ac0Data, "Power");
-				power = round(getAsFloat(powerObj, "v"));
+			var powerObj = getAsJsonObject(ac0Data, "Power");
+			power = round(getAsFloat(powerObj, "v"));
 
-				var reactivePowerObj = getAsJsonObject(ac0Data, "ReactivePower");
-				reactivepower = round(getAsFloat(reactivePowerObj, "v"));
+			var reactivePowerObj = getAsJsonObject(ac0Data, "ReactivePower");
+			reactivepower = round(getAsFloat(reactivePowerObj, "v"));
 
-				var voltageObj = getAsJsonObject(ac0Data, "Voltage");
-				voltage = round(getAsFloat(voltageObj, "v") * 1000);
+			var voltageObj = getAsJsonObject(ac0Data, "Voltage");
+			voltage = round(getAsFloat(voltageObj, "v") * 1000);
 
-				var currentObj = getAsJsonObject(ac0Data, "Current");
-				current = round(getAsFloat(currentObj, "v") * 1000);
+			var currentObj = getAsJsonObject(ac0Data, "Current");
+			current = round(getAsFloat(currentObj, "v") * 1000);
 
-				var frequencyObj = getAsJsonObject(ac0Data, "Frequency");
-				frequency = round(getAsInt(frequencyObj, "v") * 1000);
+			var frequencyObj = getAsJsonObject(ac0Data, "Frequency");
+			frequency = round(getAsInt(frequencyObj, "v") * 1000);
 
-			} catch (OpenemsNamedException e) {
-				this.logDebug(this.log, e.getMessage());
-				this._setSlaveCommunicationFailed(true);
-			}
+		} catch (OpenemsNamedException e) {
+			this.logDebug(this.log, e.getMessage());
+			this._setSlaveCommunicationFailed(true);
 		}
 
 		inverterData = this.inverterDataMap.get(serialNumber);
@@ -363,7 +369,6 @@ public class OpendtuImpl extends AbstractOpenemsComponent implements Opendtu, El
 		return b.toString();
 	}
 
-
 	@Override
 	public void handleEvent(Event event) {
 		// super.handleEvent(event);
@@ -376,9 +381,8 @@ public class OpendtuImpl extends AbstractOpenemsComponent implements Opendtu, El
 			this.calculateEnergy();
 			break;
 		}
-	}	
-	
-	
+	}
+
 	public void setActivePowerLimit(int powerLimit) throws OpenemsNamedException {
 		boolean skipProcessing = false;
 		for (InverterData inverterData : this.inverterDataMap.values()) {
