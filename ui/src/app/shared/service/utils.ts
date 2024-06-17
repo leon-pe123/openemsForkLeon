@@ -696,7 +696,7 @@ export enum YAxisTitle {
   ENERGY,
   VOLTAGE,
   TIME,
-  CURRENCY
+  CURRENCY,
 }
 
 export enum ChartAxis {
@@ -733,7 +733,7 @@ export namespace HistoryUtils {
 
     /** Choose between predefined converters */
     converter?: (value: number) => number | null,
-  }
+  };
   export type DisplayValues = {
     name: string,
     /** suffix to the name */
@@ -774,7 +774,7 @@ export namespace HistoryUtils {
      * @default Number.MAX_VALUE
      */
     order?: number,
-  }
+  };
 
   /**
  * Data from a subscription to Channel or from a historic data query.
@@ -783,7 +783,7 @@ export namespace HistoryUtils {
  */
   export type ChannelData = {
     [name: string]: number[]
-  }
+  };
 
   export type ChartData = {
     /** Input Channels that need to be queried from the database */
@@ -796,7 +796,7 @@ export namespace HistoryUtils {
       afterTitle?: (stack: string) => string,
     },
     yAxes: yAxes[],
-  }
+  };
 
   export type yAxes = {
     /** Name to be displayed on the left y-axis, also the unit to be displayed in tooltips and legend */
@@ -806,7 +806,7 @@ export namespace HistoryUtils {
     yAxisId: ChartAxis,
     /** Default: true */
     displayGrid?: boolean
-  }
+  };
 
   export namespace ValueConverter {
 
