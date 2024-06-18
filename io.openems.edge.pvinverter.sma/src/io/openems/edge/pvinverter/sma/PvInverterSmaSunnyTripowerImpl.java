@@ -53,15 +53,15 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 	private static final Map<SunSpecModel, Priority> ACTIVE_MODELS = ImmutableMap.<SunSpecModel, Priority>builder()
 			// before 2023
 			.put(DefaultSunSpecModel.S_1, Priority.LOW) // from 40002
-			.put(DefaultSunSpecModel.S_101, Priority.LOW) // from 40081
+			//.put(DefaultSunSpecModel.S_101, Priority.LOW) // from 40081
 			.put(DefaultSunSpecModel.S_103, Priority.HIGH) // from 40185
 			.put(DefaultSunSpecModel.S_120, Priority.LOW) // from 40237
-			.put(DefaultSunSpecModel.S_121, Priority.LOW) // from 40265
-			.put(DefaultSunSpecModel.S_122, Priority.LOW) // from 40297
+			//.put(DefaultSunSpecModel.S_121, Priority.LOW) // from 40265
+			//.put(DefaultSunSpecModel.S_122, Priority.LOW) // from 40297
 			.put(DefaultSunSpecModel.S_123, Priority.LOW) // from 40343 before 2023, from 40070 since 2023
 			// since 2023
 			.put(DefaultSunSpecModel.S_701, Priority.HIGH) // from 40096
-			.put(DefaultSunSpecModel.S_702, Priority.LOW) // from 40251
+			.put(DefaultSunSpecModel.S_704, Priority.LOW) // from 40251
 			.build();
 
 	// Further available SunSpec blocks provided by SMA Sunny TriPower are:
