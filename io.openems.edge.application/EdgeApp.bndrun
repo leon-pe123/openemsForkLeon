@@ -289,7 +289,6 @@
 	io.openems.edge.ess.fenecon.commercial40;version=snapshot,\
 	io.openems.edge.ess.generic;version=snapshot,\
 	io.openems.edge.ess.mr.gridcon;version=snapshot,\
-	io.openems.edge.ess.samsung;version=snapshot,\
 	io.openems.edge.ess.sma;version=snapshot,\
 	io.openems.edge.evcs.alpitronic.hypercharger;version=snapshot,\
 	io.openems.edge.evcs.api;version=snapshot,\
@@ -421,7 +420,6 @@
 	org.owasp.encoder;version='[1.2.3,1.2.4)',\
 	reactive-streams;version='[1.0.4,1.0.5)',\
 	rrd4j;version='[3.9.0,3.9.1)',\
-	io.openems.edge.io.opendtu.inverter;version=latest,\
 	io.openems.edge.timeofusetariff.api;version=snapshot,\
 	io.openems.edge.timeofusetariff.awattar;version=snapshot,\
 	io.openems.edge.timeofusetariff.corrently;version=snapshot,\
@@ -430,7 +428,8 @@
 	io.openems.edge.timeofusetariff.hassfurt;version=snapshot,\
 	io.openems.edge.timeofusetariff.rabotcharge;version=snapshot,\
 	io.openems.edge.timeofusetariff.tibber;version=snapshot,\
-	io.openems.edge.batteryinverter.victron;version=latest,\
-	io.openems.edge.io.siemenslogo;version=latest,\
-	io.openems.edge.meter.emh;version=latest
+	io.openems.edge.batteryinverter.victron;version=snapshot,\
+	io.openems.edge.io.opendtu.inverter;version=snapshot,\
+	io.openems.edge.io.siemenslogo;version=snapshot,\
+	io.openems.edge.meter.emh;version=snapshot
 	
