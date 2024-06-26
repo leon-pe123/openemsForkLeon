@@ -17,8 +17,7 @@ import io.openems.edge.common.component.ComponentManager;
 import io.openems.edge.common.component.OpenemsComponent;
 import io.openems.edge.controller.api.Controller;
 import io.openems.edge.pvinverter.api.ManagedSymmetricPvInverter;
-
-import io.openems.edge.common.channel.IntegerReadChannel;
+import io.openems.edge.common.channel.BooleanReadChannel;
 
 @Designate(ocd = Config.class, factory = true)
 @Component(//
@@ -35,16 +34,14 @@ public class ReversePowerRelayImpl extends AbstractOpenemsComponent
 	private ComponentManager componentManager;
 
 	private String pvInverterId;
-	/** The configured Power Limit. */
-	private int powerLimit = 0;
 
 	private int powerLimit30Percent = 0;
 	private int powerLimit60Percent = 0;
 
-	ChannelAddress inputChannelAddress0Percent = null;
-	ChannelAddress inputChannelAddress30Percent = null;
-	ChannelAddress inputChannelAddress60Percent = null;
-	ChannelAddress inputChannelAddress100Percent = null;
+	private ChannelAddress inputChannelAddress0Percent = null;
+	private ChannelAddress inputChannelAddress30Percent = null;
+	private ChannelAddress inputChannelAddress60Percent = null;
+	private ChannelAddress inputChannelAddress100Percent = null;
 
 	private ManagedSymmetricPvInverter pvInverter;
 
@@ -72,7 +69,7 @@ public class ReversePowerRelayImpl extends AbstractOpenemsComponent
 			this.inputChannelAddress100Percent = ChannelAddress.fromString(config.inputChannelAddress100Percent());
 
 		} catch (OpenemsNamedException e) {
-			log.error("Error parsing channel addresses", e);
+			this.log.error("Error parsing channel addresses", e);
 		}
 	}
 
@@ -92,40 +89,67 @@ public class ReversePowerRelayImpl extends AbstractOpenemsComponent
 	private void setPvLimit(Integer powerLimit) {
 
 		try {
-			pvInverter = this.componentManager.getComponent(this.pvInverterId);
-			if (pvInverter != null) {
-				pvInverter.setActivePowerLimit(this.powerLimit);
+			this.pvInverter = this.componentManager.getComponent(this.pvInverterId);
+			if (this.pvInverter != null) {
+				this.pvInverter.setActivePowerLimit(powerLimit);
+				if (powerLimit != null) {
+					this.log.warn("Setting PV limit: " + powerLimit + "W for " + this.pvInverterId);
+				} else {
+					this.log.info("No limit for " + this.pvInverterId);
+				}
+
 			}
 		} catch (OpenemsNamedException e) {
-			log.error("Error setting PV limit", e);
+			this.log.error("Error setting PV limit", e);
 		}
 
 	}
 
-	private int getChannelValue(ChannelAddress address) throws OpenemsNamedException {
-		IntegerReadChannel channel = this.componentManager.getChannel(address);
-		return channel.value().orElse(0);
+	private Boolean getChannelValue(ChannelAddress address) throws OpenemsNamedException {
+		if (address == null) {
+			return null;
+		}
+		try {
+			BooleanReadChannel channel = this.componentManager.getChannel(address);
+			return channel.value().orElse(null);
+		} catch (OpenemsNamedException e) {
+			this.log.error("Error reading channel value", e);
+			return null;
+		}
 	}
 
 	@Override
 	public void run() throws OpenemsNamedException {
 
-		int value0Percent = getChannelValue(inputChannelAddress0Percent);
-		int value30Percent = getChannelValue(inputChannelAddress30Percent);
-		int value60Percent = getChannelValue(inputChannelAddress60Percent);
-		int value100Percent = getChannelValue(inputChannelAddress100Percent);
+		try {
+			Boolean value0Percent = this.getChannelValue(this.inputChannelAddress0Percent);
+			Boolean value30Percent = this.getChannelValue(this.inputChannelAddress30Percent);
+			Boolean value60Percent = this.getChannelValue(this.inputChannelAddress60Percent);
+			Boolean value100Percent = this.getChannelValue(this.inputChannelAddress100Percent);
 
-		//
-		if (value0Percent == 1) {
-			setPvLimit(0);
-		} else if (value0Percent == 0 && value30Percent == 1 && value60Percent == 0 && value100Percent == 0) {
-			setPvLimit(powerLimit30Percent);
-		} else if (value0Percent == 0 && value30Percent == 0 && value60Percent == 1 && value100Percent == 0) {
-			setPvLimit(powerLimit60Percent);
-		} else if (value0Percent == 0 && value30Percent == 0 && value60Percent == 0 && value100Percent == 1) {
-			setPvLimit(null);
-		} else {
-			setPvLimit(0);
+			if (value0Percent == null || value30Percent == null || value60Percent == null || value100Percent == null) {
+				this.log.warn("Skipping logic in run() due to null channel values");
+				return;
+			}
+			//
+			if (value0Percent == true) {
+				this.setPvLimit(0);
+			} else if (value0Percent == false && value30Percent == true && value60Percent == false
+					&& value100Percent == false) {
+				this.setPvLimit(this.powerLimit30Percent);
+			} else if (value0Percent == false && value30Percent == false && value60Percent == true
+					&& value100Percent == false) {
+				this.setPvLimit(this.powerLimit60Percent);
+			} else if (value0Percent == false && value30Percent == false && value60Percent == false
+					&& value100Percent == true) {
+				this.setPvLimit(null);
+			} else {
+				this.setPvLimit(0);
+			}
+
+		} catch (OpenemsNamedException e) {
+			this.log.error("No values from modbus channels yet", e);
+			return;
 		}
 
 	}

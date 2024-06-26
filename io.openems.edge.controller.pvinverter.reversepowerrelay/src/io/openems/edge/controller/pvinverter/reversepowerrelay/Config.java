@@ -4,8 +4,8 @@ import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
 @ObjectClassDefinition(//
-		name = "Controller PV-Inverter Fix Power Limit", //
-		description = "Defines a fixed power limitation to PV inverter.")
+		name = "Controller PV-Inverter Reverse Power Relay (Rundsteuerempfänger)", //
+		description = "Defines a reverse power relay to limit PV inverter.")
 @interface Config {
 
 	@AttributeDefinition(name = "Component-ID", description = "Unique ID of this Component")

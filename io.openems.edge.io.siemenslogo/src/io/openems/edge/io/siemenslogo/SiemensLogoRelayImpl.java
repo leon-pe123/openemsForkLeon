@@ -26,7 +26,7 @@ import io.openems.edge.common.modbusslave.ModbusSlaveNatureTable;
 import io.openems.edge.common.modbusslave.ModbusSlaveTable;
 import io.openems.edge.common.modbusslave.ModbusType;
 import io.openems.edge.common.taskmanager.Priority;
-import io.openems.edge.io.api.DigitalOutput;
+
 
 @Designate(ocd = Config.class, factory = true)
 @Component(//
@@ -35,7 +35,7 @@ import io.openems.edge.io.api.DigitalOutput;
 		configurationPolicy = ConfigurationPolicy.REQUIRE //
 )
 public class SiemensLogoRelayImpl extends AbstractSiemensLogoRelay
-		implements SiemensLogoRelay, DigitalOutput, ModbusComponent, OpenemsComponent, ModbusSlave {
+		implements SiemensLogoRelay,  ModbusComponent, OpenemsComponent, ModbusSlave {
 
 	private int writeOffset = 0;
 	private int readOffset = 0;
