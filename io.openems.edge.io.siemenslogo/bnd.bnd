@@ -13,7 +13,8 @@ Bundle-Version: 1.0.0.${tstamp}
 	slf4j.api
 
 -testpath: \
-	${testpath}	
+	${testpath},\
+	org.mockito.mockito-core
 Bundle-Description: Siemens LOGO! 8 as network relais. Connected via Modbus. Relays starting \
 	at VM 101, Bit 0 on SPS.
 	
