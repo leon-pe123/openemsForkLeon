@@ -3,7 +3,7 @@ encoding//src/io/openems/edge/controller/pvinverter/reversepowerrelay/Config.jav
 encoding//src/io/openems/edge/controller/pvinverter/reversepowerrelay/ReversePowerRelay.java=UTF-8
 encoding//src/io/openems/edge/controller/pvinverter/reversepowerrelay/ReversePowerRelayImpl.java=UTF-8
 encoding//test/io/openems/edge/controller/pvinverter/reversepowerrelay/MyConfig.java=UTF-8
-encoding//test/io/openems/edge/controller/pvinverter/reversepowerrelay/MyControllerTest.java=UTF-8
+encoding//test/io/openems/edge/controller/pvinverter/reversepowerrelay/ReversePowerRelayImplTest.java=UTF-8
 encoding/<project>=UTF-8
 encoding/bnd.bnd=UTF-8
 encoding/readme.adoc=UTF-8

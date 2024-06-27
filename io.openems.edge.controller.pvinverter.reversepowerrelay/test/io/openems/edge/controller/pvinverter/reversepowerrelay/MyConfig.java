@@ -2,13 +2,20 @@ package io.openems.edge.controller.pvinverter.reversepowerrelay;
 
 import io.openems.common.test.AbstractComponentConfig;
 
-
 @SuppressWarnings("all")
 public class MyConfig extends AbstractComponentConfig implements Config {
 
 	protected static class Builder {
 		private String id;
-//		private String setting0;
+		private String alias = ""; // Default to empty string
+		private boolean enabled = true; // Default to true
+		private String pvInverterId;
+		private String inputChannelAddress0Percent;
+		private String inputChannelAddress30Percent;
+		private String inputChannelAddress60Percent;
+		private String inputChannelAddress100Percent;
+		private int powerLimit30;
+		private int powerLimit60;
 
 		private Builder() {
 		}
@@ -18,10 +25,50 @@ public class MyConfig extends AbstractComponentConfig implements Config {
 			return this;
 		}
 
-//		public Builder setSetting0(String setting0) {
-//			this.setting0 = setting0;
-//			return this;
-//		}
+		public Builder setAlias(String alias) {
+			this.alias = alias;
+			return this;
+		}
+
+		public Builder setEnabled(boolean enabled) {
+			this.enabled = enabled;
+			return this;
+		}
+
+		public Builder setPvInverterId(String pvInverterId) {
+			this.pvInverterId = pvInverterId;
+			return this;
+		}
+
+		public Builder setInputChannelAddress0Percent(String inputChannelAddress0Percent) {
+			this.inputChannelAddress0Percent = inputChannelAddress0Percent;
+			return this;
+		}
+
+		public Builder setInputChannelAddress30Percent(String inputChannelAddress30Percent) {
+			this.inputChannelAddress30Percent = inputChannelAddress30Percent;
+			return this;
+		}
+
+		public Builder setInputChannelAddress60Percent(String inputChannelAddress60Percent) {
+			this.inputChannelAddress60Percent = inputChannelAddress60Percent;
+			return this;
+		}
+
+		public Builder setInputChannelAddress100Percent(String inputChannelAddress100Percent) {
+			this.inputChannelAddress100Percent = inputChannelAddress100Percent;
+			return this;
+		}
+
+		public Builder setPowerLimit30(int powerLimit30) {
+			this.powerLimit30 = powerLimit30;
+			return this;
+		}
+
+		public Builder setPowerLimit60(int powerLimit60) {
+			this.powerLimit60 = powerLimit60;
+			return this;
+		}
 
 		public MyConfig build() {
 			return new MyConfig(this);
@@ -30,7 +77,7 @@ public class MyConfig extends AbstractComponentConfig implements Config {
 
 	/**
 	 * Create a Config builder.
-	 * 
+	 *
 	 * @return a {@link Builder}
 	 */
 	public static Builder create() {
@@ -45,50 +92,52 @@ public class MyConfig extends AbstractComponentConfig implements Config {
 	}
 
 	@Override
+	public String id() {
+		return this.builder.id;
+	}
+
+	@Override
+	public String alias() {
+		return this.builder.alias;
+	}
+
+	@Override
+	public boolean enabled() {
+		return this.builder.enabled;
+	}
+
+	@Override
 	public String pvInverter_id() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.builder.pvInverterId;
 	}
 
 	@Override
 	public String inputChannelAddress0Percent() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.builder.inputChannelAddress0Percent;
 	}
 
 	@Override
 	public String inputChannelAddress30Percent() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.builder.inputChannelAddress30Percent;
 	}
 
 	@Override
 	public String inputChannelAddress60Percent() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.builder.inputChannelAddress60Percent;
 	}
 
 	@Override
 	public String inputChannelAddress100Percent() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.builder.inputChannelAddress100Percent;
 	}
 
 	@Override
 	public int powerLimit30() {
-		// TODO Auto-generated method stub
-		return 0;
+		return this.builder.powerLimit30;
 	}
 
 	@Override
 	public int powerLimit60() {
-		// TODO Auto-generated method stub
-		return 0;
+		return this.builder.powerLimit60;
 	}
-
-//	@Override
-//	public String setting0() {
-//		return this.builder.setting0;
-//	}
-
 }
