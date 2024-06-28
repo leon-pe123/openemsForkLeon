@@ -425,11 +425,14 @@ public class TimedataInfluxDb extends AbstractOpenemsBackendComponent implements
 			return false;
 		}
 
-		// Valid Component-ID
-		var componentId = c[0];
-		if (!COMPONENT_ID_PATTERN.test(componentId)) {
-			return false;
-		}
+		/**
+		 * 2024 06 28 TKL Commented out. Otherwise none of mine existing channels will
+		 * be written to influx. Valid Component-ID
+		 */
+		//var componentId = c[0];
+		//if (!COMPONENT_ID_PATTERN.test(componentId)) {
+		//	return false;
+		//}
 
 		// Valid Channel-ID
 		var channelId = c[1];
