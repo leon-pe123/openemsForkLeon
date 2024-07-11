@@ -64,6 +64,59 @@ public interface SiemensLogoRelay extends DigitalOutput, OpenemsComponent, Modbu
 		INPUT_4(new BooleanDoc() //
 				.accessMode(AccessMode.READ_ONLY) //
 				.persistencePriority(PersistencePriority.HIGH)),
+		
+		/**
+		 * Input 5.
+		 * 
+		 * <ul>
+		 * <li>Interface: SiemensLogoRelayInput
+		 * <li>Type: Boolean
+		 * <li>Range: On/Off
+		 * </ul>
+		 */
+		INPUT_5(new BooleanDoc() //
+				.accessMode(AccessMode.READ_ONLY) //
+				.persistencePriority(PersistencePriority.HIGH)),
+		
+		/**
+		 * Input 6.
+		 * 
+		 * <ul>
+		 * <li>Interface: SiemensLogoRelayInput
+		 * <li>Type: Boolean
+		 * <li>Range: On/Off
+		 * </ul>
+		 */
+		INPUT_6(new BooleanDoc() //
+				.accessMode(AccessMode.READ_ONLY) //
+				.persistencePriority(PersistencePriority.HIGH)),
+		
+		/**
+		 * Input 7.
+		 * 
+		 * <ul>
+		 * <li>Interface: SiemensLogoRelayInput
+		 * <li>Type: Boolean
+		 * <li>Range: On/Off
+		 * </ul>
+		 */
+		INPUT_7(new BooleanDoc() //
+				.accessMode(AccessMode.READ_ONLY) //
+				.persistencePriority(PersistencePriority.HIGH)),
+		
+		
+		/**
+		 * Input 8.
+		 * 
+		 * <ul>
+		 * <li>Interface: SiemensLogoRelayInput
+		 * <li>Type: Boolean
+		 * <li>Range: On/Off
+		 * </ul>
+		 */
+		INPUT_8(new BooleanDoc() //
+				.accessMode(AccessMode.READ_ONLY) //
+				.persistencePriority(PersistencePriority.HIGH)),		
 
 		/**
 		 * Holds writes to Relay Output 1 for debugging.
@@ -74,7 +127,8 @@ public interface SiemensLogoRelay extends DigitalOutput, OpenemsComponent, Modbu
 		 * <li>Range: On/Off
 		 * </ul>
 		 */
-		DEBUG_RELAY_1(Doc.of(OpenemsType.BOOLEAN)), //
+		DEBUG_RELAY_1(Doc.of(OpenemsType.BOOLEAN) //
+				.persistencePriority(PersistencePriority.MEDIUM)), //
 		/**
 		 * Relay 1.
 		 * 
@@ -84,9 +138,9 @@ public interface SiemensLogoRelay extends DigitalOutput, OpenemsComponent, Modbu
 		 * <li>Range: On/Off
 		 * </ul>
 		 */
-		RELAY_1(new BooleanDoc() //
+		OUTPUT_1(new BooleanDoc() //
 				.accessMode(AccessMode.READ_WRITE) //
-				.persistencePriority(PersistencePriority.MEDIUM) //
+				.persistencePriority(PersistencePriority.HIGH) //
 				.onChannelSetNextWriteMirrorToDebugChannel(ChannelId.DEBUG_RELAY_1)),
 
 		/**
@@ -109,9 +163,9 @@ public interface SiemensLogoRelay extends DigitalOutput, OpenemsComponent, Modbu
 		 * <li>Range: On/Off
 		 * </ul>
 		 */
-		RELAY_2(new BooleanDoc() //
+		OUTPUT_2(new BooleanDoc() //
 				.accessMode(AccessMode.READ_WRITE) //
-				.persistencePriority(PersistencePriority.MEDIUM) //
+				.persistencePriority(PersistencePriority.HIGH) //
 				.onChannelSetNextWriteMirrorToDebugChannel(ChannelId.DEBUG_RELAY_2)),
 
 		/**
@@ -134,9 +188,9 @@ public interface SiemensLogoRelay extends DigitalOutput, OpenemsComponent, Modbu
 		 * <li>Range: On/Off
 		 * </ul>
 		 */
-		RELAY_3(new BooleanDoc() //
+		OUTPUT_3(new BooleanDoc() //
 				.accessMode(AccessMode.READ_WRITE) //
-				.persistencePriority(PersistencePriority.MEDIUM) //
+				.persistencePriority(PersistencePriority.HIGH) //
 				.onChannelSetNextWriteMirrorToDebugChannel(ChannelId.DEBUG_RELAY_3)),
 
 		/**
@@ -159,9 +213,9 @@ public interface SiemensLogoRelay extends DigitalOutput, OpenemsComponent, Modbu
 		 * <li>Range: On/Off
 		 * </ul>
 		 */
-		RELAY_4(new BooleanDoc() //
+		OUTPUT_4(new BooleanDoc() //
 				.accessMode(AccessMode.READ_WRITE) //
-				.persistencePriority(PersistencePriority.MEDIUM) //
+				.persistencePriority(PersistencePriority.HIGH) //
 				.onChannelSetNextWriteMirrorToDebugChannel(ChannelId.DEBUG_RELAY_4)),
 
 		/**
@@ -184,9 +238,9 @@ public interface SiemensLogoRelay extends DigitalOutput, OpenemsComponent, Modbu
 		 * <li>Range: On/Off
 		 * </ul>
 		 */
-		RELAY_5(new BooleanDoc() //
+		OUTPUT_5(new BooleanDoc() //
 				.accessMode(AccessMode.READ_WRITE) //
-				.persistencePriority(PersistencePriority.MEDIUM) //
+				.persistencePriority(PersistencePriority.HIGH) //
 				.onChannelSetNextWriteMirrorToDebugChannel(ChannelId.DEBUG_RELAY_5)),
 
 		/**
@@ -209,9 +263,9 @@ public interface SiemensLogoRelay extends DigitalOutput, OpenemsComponent, Modbu
 		 * <li>Range: On/Off
 		 * </ul>
 		 */
-		RELAY_6(new BooleanDoc() //
+		OUTPUT_6(new BooleanDoc() //
 				.accessMode(AccessMode.READ_WRITE) //
-				.persistencePriority(PersistencePriority.MEDIUM) //
+				.persistencePriority(PersistencePriority.HIGH) //
 				.onChannelSetNextWriteMirrorToDebugChannel(ChannelId.DEBUG_RELAY_6)),
 
 		/**
@@ -234,9 +288,9 @@ public interface SiemensLogoRelay extends DigitalOutput, OpenemsComponent, Modbu
 		 * <li>Range: On/Off
 		 * </ul>
 		 */
-		RELAY_7(new BooleanDoc() //
+		OUTPUT_7(new BooleanDoc() //
 				.accessMode(AccessMode.READ_WRITE) //
-				.persistencePriority(PersistencePriority.MEDIUM) //
+				.persistencePriority(PersistencePriority.HIGH) //
 				.onChannelSetNextWriteMirrorToDebugChannel(ChannelId.DEBUG_RELAY_7)),
 
 		/**
@@ -259,9 +313,9 @@ public interface SiemensLogoRelay extends DigitalOutput, OpenemsComponent, Modbu
 		 * <li>Range: On/Off
 		 * </ul>
 		 */
-		RELAY_8(new BooleanDoc() //
+		OUTPUT_8(new BooleanDoc() //
 				.accessMode(AccessMode.READ_WRITE) //
-				.persistencePriority(PersistencePriority.MEDIUM) //
+				.persistencePriority(PersistencePriority.HIGH) //
 				.onChannelSetNextWriteMirrorToDebugChannel(ChannelId.DEBUG_RELAY_8));
 
 		private final Doc doc;

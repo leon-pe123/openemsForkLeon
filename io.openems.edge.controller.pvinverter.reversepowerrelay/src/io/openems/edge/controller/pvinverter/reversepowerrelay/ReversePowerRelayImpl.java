@@ -43,7 +43,7 @@ public class ReversePowerRelayImpl extends AbstractOpenemsComponent
 	private ChannelAddress inputChannelAddress60Percent = null;
 	private ChannelAddress inputChannelAddress100Percent = null;
 
-	private ManagedSymmetricPvInverter pvInverter;
+	
 
 	public ReversePowerRelayImpl() {
 		super(//
@@ -87,16 +87,19 @@ public class ReversePowerRelayImpl extends AbstractOpenemsComponent
 	}
 
 	private void setPvLimit(Integer powerLimit) {
-
+		
 		try {
-			this.pvInverter = this.componentManager.getComponent(this.pvInverterId);
-			if (this.pvInverter != null) {
-				this.pvInverter.setActivePowerLimit(powerLimit);
+			ManagedSymmetricPvInverter pvInverter = this.componentManager.getComponent(this.pvInverterId);			
+			pvInverter = this.componentManager.getComponent(this.pvInverterId);
+			if (pvInverter != null) {
+
 				if (powerLimit != null) {
 					this.log.warn("Setting PV limit: " + powerLimit + "W for " + this.pvInverterId);
 				} else {
 					this.log.info("No limit for " + this.pvInverterId);
 				}
+
+				pvInverter.setActivePowerLimit(powerLimit);
 
 			}
 		} catch (OpenemsNamedException e) {
@@ -129,7 +132,7 @@ public class ReversePowerRelayImpl extends AbstractOpenemsComponent
 
 			if (value0Percent == null || value30Percent == null || value60Percent == null || value100Percent == null) {
 				this.log.warn("Skipping logic in run() due to null channel values");
-				this.setPvLimit(0);				
+				this.setPvLimit(0);
 				return;
 			}
 			//
@@ -154,16 +157,16 @@ public class ReversePowerRelayImpl extends AbstractOpenemsComponent
 		}
 
 	}
-	
-    public String getPvInverterId() {
-        return this.pvInverterId;
-    }
 
-    public int getPowerLimit30Percent() {
-        return this.powerLimit30Percent;
-    }
+	public String getPvInverterId() {
+		return this.pvInverterId;
+	}
 
-    public int getPowerLimit60Percent() {
-        return this.powerLimit60Percent;
-    }
+	public int getPowerLimit30Percent() {
+		return this.powerLimit30Percent;
+	}
+
+	public int getPowerLimit60Percent() {
+		return this.powerLimit60Percent;
+	}
 }

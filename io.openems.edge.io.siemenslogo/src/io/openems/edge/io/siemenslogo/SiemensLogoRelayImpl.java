@@ -84,7 +84,11 @@ public class SiemensLogoRelayImpl extends AbstractSiemensLogoRelay
 						m(SiemensLogoRelay.ChannelId.INPUT_1, new CoilElement(0 + this.readOffset)), //
 						m(SiemensLogoRelay.ChannelId.INPUT_2, new CoilElement(1 + this.readOffset)), //
 						m(SiemensLogoRelay.ChannelId.INPUT_3, new CoilElement(2 + this.readOffset)), //
-						m(SiemensLogoRelay.ChannelId.INPUT_4, new CoilElement(3 + this.readOffset)) //
+						m(SiemensLogoRelay.ChannelId.INPUT_4, new CoilElement(3 + this.readOffset)), //
+						m(SiemensLogoRelay.ChannelId.INPUT_5, new CoilElement(4 + this.readOffset)), //
+						m(SiemensLogoRelay.ChannelId.INPUT_6, new CoilElement(5 + this.readOffset)), //
+						m(SiemensLogoRelay.ChannelId.INPUT_7, new CoilElement(6 + this.readOffset)), //
+						m(SiemensLogoRelay.ChannelId.INPUT_8, new CoilElement(7 + this.readOffset)) //						
 				),
 				
 				
@@ -92,34 +96,34 @@ public class SiemensLogoRelayImpl extends AbstractSiemensLogoRelay
 				 * For Read: Read Coils
 				 */
 				new FC1ReadCoilsTask(this.writeOffset, Priority.LOW, //
-						m(SiemensLogoRelay.ChannelId.RELAY_1, new CoilElement(0 + this.writeOffset)), //
-						m(SiemensLogoRelay.ChannelId.RELAY_2, new CoilElement(1 + this.writeOffset)), //
-						m(SiemensLogoRelay.ChannelId.RELAY_3, new CoilElement(2 + this.writeOffset)), //
-						m(SiemensLogoRelay.ChannelId.RELAY_4, new CoilElement(3 + this.writeOffset)), //
-						m(SiemensLogoRelay.ChannelId.RELAY_5, new CoilElement(4 + this.writeOffset)), //
-						m(SiemensLogoRelay.ChannelId.RELAY_6, new CoilElement(5 + this.writeOffset)), //
-						m(SiemensLogoRelay.ChannelId.RELAY_7, new CoilElement(6 + this.writeOffset)), //
-						m(SiemensLogoRelay.ChannelId.RELAY_8, new CoilElement(7 + this.writeOffset)) //
+						m(SiemensLogoRelay.ChannelId.OUTPUT_1, new CoilElement(0 + this.writeOffset)), //
+						m(SiemensLogoRelay.ChannelId.OUTPUT_2, new CoilElement(1 + this.writeOffset)), //
+						m(SiemensLogoRelay.ChannelId.OUTPUT_3, new CoilElement(2 + this.writeOffset)), //
+						m(SiemensLogoRelay.ChannelId.OUTPUT_4, new CoilElement(3 + this.writeOffset)), //
+						m(SiemensLogoRelay.ChannelId.OUTPUT_5, new CoilElement(4 + this.writeOffset)), //
+						m(SiemensLogoRelay.ChannelId.OUTPUT_6, new CoilElement(5 + this.writeOffset)), //
+						m(SiemensLogoRelay.ChannelId.OUTPUT_7, new CoilElement(6 + this.writeOffset)), //
+						m(SiemensLogoRelay.ChannelId.OUTPUT_8, new CoilElement(7 + this.writeOffset)) //
 				),
 				/*
 				 * For Write: Write Single Coil
 				 */
 				new FC5WriteCoilTask(0 + this.writeOffset,
-						m(SiemensLogoRelay.ChannelId.RELAY_1, new CoilElement(0 + this.writeOffset))), //
+						m(SiemensLogoRelay.ChannelId.OUTPUT_1, new CoilElement(0 + this.writeOffset))), //
 				new FC5WriteCoilTask(1 + this.writeOffset,
-						m(SiemensLogoRelay.ChannelId.RELAY_2, new CoilElement(1 + this.writeOffset))), //
+						m(SiemensLogoRelay.ChannelId.OUTPUT_2, new CoilElement(1 + this.writeOffset))), //
 				new FC5WriteCoilTask(2 + this.writeOffset,
-						m(SiemensLogoRelay.ChannelId.RELAY_3, new CoilElement(2 + this.writeOffset))), //
+						m(SiemensLogoRelay.ChannelId.OUTPUT_3, new CoilElement(2 + this.writeOffset))), //
 				new FC5WriteCoilTask(3 + this.writeOffset,
-						m(SiemensLogoRelay.ChannelId.RELAY_4, new CoilElement(3 + this.writeOffset))), //
+						m(SiemensLogoRelay.ChannelId.OUTPUT_4, new CoilElement(3 + this.writeOffset))), //
 				new FC5WriteCoilTask(4 + this.writeOffset,
-						m(SiemensLogoRelay.ChannelId.RELAY_5, new CoilElement(4 + this.writeOffset))), //
+						m(SiemensLogoRelay.ChannelId.OUTPUT_5, new CoilElement(4 + this.writeOffset))), //
 				new FC5WriteCoilTask(5 + this.writeOffset,
-						m(SiemensLogoRelay.ChannelId.RELAY_6, new CoilElement(5 + this.writeOffset))), //
+						m(SiemensLogoRelay.ChannelId.OUTPUT_6, new CoilElement(5 + this.writeOffset))), //
 				new FC5WriteCoilTask(6 + this.writeOffset,
-						m(SiemensLogoRelay.ChannelId.RELAY_7, new CoilElement(6 + this.writeOffset))), //
+						m(SiemensLogoRelay.ChannelId.OUTPUT_7, new CoilElement(6 + this.writeOffset))), //
 				new FC5WriteCoilTask(7 + this.writeOffset,
-						m(SiemensLogoRelay.ChannelId.RELAY_8, new CoilElement(7 + this.writeOffset))) //
+						m(SiemensLogoRelay.ChannelId.OUTPUT_8, new CoilElement(7 + this.writeOffset))) //
 		);
 	}
 
@@ -127,19 +131,24 @@ public class SiemensLogoRelayImpl extends AbstractSiemensLogoRelay
 	public ModbusSlaveTable getModbusSlaveTable(AccessMode accessMode) {
 		return new ModbusSlaveTable(OpenemsComponent.getModbusSlaveNatureTable(accessMode), //
 				ModbusSlaveNatureTable.of(SiemensLogoRelay.class, accessMode, 100)//
-						.channel(0 + this.writeOffset, SiemensLogoRelay.ChannelId.RELAY_1, ModbusType.UINT16) //
-						.channel(1 + this.writeOffset, SiemensLogoRelay.ChannelId.RELAY_2, ModbusType.UINT16) //
-						.channel(2 + this.writeOffset, SiemensLogoRelay.ChannelId.RELAY_3, ModbusType.UINT16) //
-						.channel(3 + this.writeOffset, SiemensLogoRelay.ChannelId.RELAY_4, ModbusType.UINT16) //
-						.channel(4 + this.writeOffset, SiemensLogoRelay.ChannelId.RELAY_5, ModbusType.UINT16) //
-						.channel(5 + this.writeOffset, SiemensLogoRelay.ChannelId.RELAY_6, ModbusType.UINT16) //
-						.channel(6 + this.writeOffset, SiemensLogoRelay.ChannelId.RELAY_7, ModbusType.UINT16) //
-						.channel(7 + this.writeOffset, SiemensLogoRelay.ChannelId.RELAY_8, ModbusType.UINT16) //
+						.channel(0 + this.writeOffset, SiemensLogoRelay.ChannelId.OUTPUT_1, ModbusType.UINT16) //
+						.channel(1 + this.writeOffset, SiemensLogoRelay.ChannelId.OUTPUT_2, ModbusType.UINT16) //
+						.channel(2 + this.writeOffset, SiemensLogoRelay.ChannelId.OUTPUT_3, ModbusType.UINT16) //
+						.channel(3 + this.writeOffset, SiemensLogoRelay.ChannelId.OUTPUT_4, ModbusType.UINT16) //
+						.channel(4 + this.writeOffset, SiemensLogoRelay.ChannelId.OUTPUT_5, ModbusType.UINT16) //
+						.channel(5 + this.writeOffset, SiemensLogoRelay.ChannelId.OUTPUT_6, ModbusType.UINT16) //
+						.channel(6 + this.writeOffset, SiemensLogoRelay.ChannelId.OUTPUT_7, ModbusType.UINT16) //
+						.channel(7 + this.writeOffset, SiemensLogoRelay.ChannelId.OUTPUT_8, ModbusType.UINT16) //
 						
 						.channel(8 + this.readOffset, SiemensLogoRelay.ChannelId.INPUT_1, ModbusType.UINT16) //
 						.channel(9 + this.readOffset, SiemensLogoRelay.ChannelId.INPUT_2, ModbusType.UINT16) //
 						.channel(10 + this.readOffset, SiemensLogoRelay.ChannelId.INPUT_3, ModbusType.UINT16) //
-						.channel(11 + this.readOffset, SiemensLogoRelay.ChannelId.INPUT_4, ModbusType.UINT16) //						
+						.channel(11 + this.readOffset, SiemensLogoRelay.ChannelId.INPUT_4, ModbusType.UINT16) //
+						
+						.channel(12 + this.readOffset, SiemensLogoRelay.ChannelId.INPUT_5, ModbusType.UINT16) //
+						.channel(13 + this.readOffset, SiemensLogoRelay.ChannelId.INPUT_6, ModbusType.UINT16) //
+						.channel(14 + this.readOffset, SiemensLogoRelay.ChannelId.INPUT_7, ModbusType.UINT16) //
+						.channel(15 + this.readOffset, SiemensLogoRelay.ChannelId.INPUT_8, ModbusType.UINT16) //						
 						
 						.build()//
 		);

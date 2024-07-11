@@ -66,11 +66,13 @@ public abstract class AbstractSiemensLogoRelay extends AbstractOpenemsModbusComp
 	@Override
 	public String debugLog() {
         String outputLog = Arrays.stream(this.digitalOutputChannels)
-                .map(chan -> chan.value().asOptional())
+        		.limit(8)          
+				.map(chan -> chan.value().asOptional())
                 .map(t -> t.isPresent() ? (t.get() ? "X" : "-") : "?")
                 .collect(Collectors.joining(","));
         
         String inputLog = Arrays.stream(this.digitalInputChannels)
+        		.limit(8)
                 .map(chan -> chan.value().asOptional())
                 .map(t -> t.isPresent() ? (t.get() ? "I" : "O") : "?")
                 .collect(Collectors.joining(","));
