@@ -16,15 +16,20 @@ import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
 import org.osgi.service.event.propertytypes.EventTopics;
 import org.osgi.service.metatype.annotations.Designate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
 
 import io.openems.common.channel.AccessMode;
 import io.openems.common.exceptions.OpenemsException;
+import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
 import io.openems.edge.bridge.modbus.api.BridgeModbus;
 import io.openems.edge.bridge.modbus.api.ModbusComponent;
 import io.openems.edge.bridge.modbus.sunspec.DefaultSunSpecModel;
 import io.openems.edge.bridge.modbus.sunspec.SunSpecModel;
+import io.openems.edge.bridge.modbus.sunspec.DefaultSunSpecModel.S123_WMaxLim_Ena;
+import io.openems.edge.common.channel.EnumWriteChannel;
 import io.openems.edge.common.component.OpenemsComponent;
 import io.openems.edge.common.event.EdgeEventConstants;
 import io.openems.edge.common.modbusslave.ModbusSlave;
@@ -53,15 +58,15 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 	private static final Map<SunSpecModel, Priority> ACTIVE_MODELS = ImmutableMap.<SunSpecModel, Priority>builder()
 			.put(DefaultSunSpecModel.S_1, Priority.LOW) // from 40002
 
-			/*
-			 * This is depending on the specific inverter.
-			 */
-			.put(DefaultSunSpecModel.S_111, Priority.LOW) // from 40070
-			.put(DefaultSunSpecModel.S_112, Priority.LOW) // from 40070
-			.put(DefaultSunSpecModel.S_113, Priority.HIGH) // from 40070
+			// .put(DefaultSunSpecModel.S_103, Priority.LOW) //
+			.put(DefaultSunSpecModel.S_113, Priority.LOW) // from 40069
+			.put(DefaultSunSpecModel.S_120, Priority.LOW) // from 40159
+			.put(DefaultSunSpecModel.S_123, Priority.LOW) // from 40237
 			.build();
 
 	private static final int READ_FROM_MODBUS_BLOCK = 1;
+
+	private final Logger log = LoggerFactory.getLogger(PvInverterFroniusImpl.class);
 
 	@Reference
 	private ConfigurationAdmin cm;
@@ -89,6 +94,25 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 				config.modbusUnitId(), this.cm, "Modbus", config.modbus_id(), READ_FROM_MODBUS_BLOCK, Phase.ALL)) {
 			return;
 		}
+	}
+
+	@Override
+	public void setActivePowerLimit(int value) throws OpenemsNamedException {
+
+		EnumWriteChannel wMaxLimEnaChannel;
+		if (this.isSunSpecInitializationCompleted()) {
+			// Get Power Limitation Enabled WriteChannel
+			wMaxLimEnaChannel = this.getSunSpecChannelOrError(DefaultSunSpecModel.S123.W_MAX_LIM_ENA);
+		} else {
+			log.info("SunSpec model not completely intialized. Skipping PV Limiter");
+			return;
+		}
+
+		this.getActivePowerLimitChannel().setNextWriteValue(value);
+
+		// has to be written every time
+		wMaxLimEnaChannel.setNextWriteValue(S123_WMaxLim_Ena.ENABLED);
+
 	}
 
 	@Deactivate
