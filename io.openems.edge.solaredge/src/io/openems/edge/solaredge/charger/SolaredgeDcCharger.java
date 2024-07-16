@@ -337,7 +337,9 @@ public interface SolaredgeDcCharger extends EssDcCharger, OpenemsComponent {
 		 */
 		MAX_REACTIVE_POWER_PV_LIMIT(new IntegerDoc() //
 				.unit(Unit.VOLT_AMPERE_REACTIVE) //
-				.accessMode(AccessMode.READ_ONLY));
+				.accessMode(AccessMode.READ_ONLY)),
+
+		;
 
 		private final Doc doc;
 
@@ -603,9 +605,6 @@ public interface SolaredgeDcCharger extends EssDcCharger, OpenemsComponent {
 		return this.getReactivePowerPvLimitChannel().value();
 	}
 
-	
-	
-	
 	// ACTIVE_PV_POWER_LIMIT_PERCENT
 	public default IntegerReadChannel getPowerPvLimitPercentChannel() {
 		return this.channel(ChannelId.POWER_PV_LIMIT_PERCENT);
@@ -621,8 +620,6 @@ public interface SolaredgeDcCharger extends EssDcCharger, OpenemsComponent {
 		return this.getPowerPvLimitPercentChannel().value();
 	}
 
-	
-	
 	// PvMode
 	public default Channel<PvMode> getPvModeChannel() {
 		return this.channel(ChannelId.PV_MODE);

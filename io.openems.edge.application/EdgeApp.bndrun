@@ -191,11 +191,11 @@
 	bnd.identity;id='io.openems.edge.timeofusetariff.rabotcharge',\
 	bnd.identity;id='io.openems.edge.timeofusetariff.tibber',\
 	bnd.identity;id='io.openems.edge.timeofusetariff.api',\
-	bnd.identity;id='io.openems.edge.io.opendtu.inverter',\
 	bnd.identity;id='io.openems.edge.batteryinverter.victron',\
+	bnd.identity;id='io.openems.edge.controller.pvinverter.reversepowerrelay',\
+	bnd.identity;id='io.openems.edge.io.opendtu.inverter',\
 	bnd.identity;id='io.openems.edge.io.siemenslogo',\
-	bnd.identity;id='io.openems.edge.meter.emh',\
-	bnd.identity;id='io.openems.edge.controller.pvinverter.reversepowerrelay'
+	bnd.identity;id='io.openems.edge.meter.emh'
 -runbundles: \
 	Java-WebSocket;version='[1.5.4,1.5.5)',\
 	bcpkix;version='[1.70.0,1.70.1)',\
@@ -363,7 +363,6 @@
 	io.openems.edge.scheduler.daily;version=snapshot,\
 	io.openems.edge.scheduler.fixedorder;version=snapshot,\
 	io.openems.edge.simulator;version=snapshot,\
-	io.openems.edge.solaredge;version=snapshot,\
 	io.openems.edge.tesla.powerwall2;version=snapshot,\
 	io.openems.edge.thermometer.api;version=snapshot,\
 	io.openems.edge.timedata.api;version=snapshot,\
@@ -438,10 +437,5 @@
 	io.openems.edge.controller.pvinverter.reversepowerrelay;version=snapshot,\
 	io.openems.edge.io.opendtu.inverter;version=snapshot,\
 	io.openems.edge.io.siemenslogo;version=snapshot,\
-	io.openems.edge.meter.emh;version=snapshot
-	io.openems.edge.batteryinverter.victron;version=snapshot,\
-	io.openems.edge.io.opendtu.inverter;version=snapshot,\
 	io.openems.edge.meter.emh;version=snapshot,\
-	io.openems.edge.controller.pvinverter.reversepowerrelay;version=snapshot,\
-	io.openems.edge.ess.samsung;version=snapshot,\
-	io.openems.edge.io.siemenslogo;version=snapshot
+	io.openems.edge.solaredge;version=snapshot
