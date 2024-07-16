@@ -30,6 +30,8 @@ import io.openems.edge.bridge.modbus.sunspec.DefaultSunSpecModel;
 import io.openems.edge.bridge.modbus.sunspec.SunSpecModel;
 import io.openems.edge.bridge.modbus.sunspec.DefaultSunSpecModel.S123_WMaxLim_Ena;
 import io.openems.edge.common.channel.EnumWriteChannel;
+import io.openems.edge.common.channel.FloatReadChannel;
+
 import io.openems.edge.common.component.OpenemsComponent;
 import io.openems.edge.common.event.EdgeEventConstants;
 import io.openems.edge.common.modbusslave.ModbusSlave;
@@ -41,6 +43,7 @@ import io.openems.edge.pvinverter.sunspec.AbstractSunSpecPvInverter;
 import io.openems.edge.pvinverter.sunspec.Phase;
 import io.openems.edge.pvinverter.sunspec.SunSpecPvInverter;
 
+
 @Designate(ocd = Config.class, factory = true)
 @Component(//
 		name = "PV-Inverter.Fronius", //
@@ -50,8 +53,10 @@ import io.openems.edge.pvinverter.sunspec.SunSpecPvInverter;
 				"type=PRODUCTION" //
 		})
 @EventTopics({ //
+		EdgeEventConstants.TOPIC_CYCLE_AFTER_PROCESS_IMAGE, //
 		EdgeEventConstants.TOPIC_CYCLE_EXECUTE_WRITE //
 })
+
 public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements PvInverterFronius, SunSpecPvInverter,
 		ManagedSymmetricPvInverter, ElectricityMeter, ModbusComponent, OpenemsComponent, EventHandler, ModbusSlave {
 
@@ -62,6 +67,7 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 			.put(DefaultSunSpecModel.S_113, Priority.LOW) // from 40069
 			.put(DefaultSunSpecModel.S_120, Priority.LOW) // from 40159
 			.put(DefaultSunSpecModel.S_123, Priority.LOW) // from 40237
+			.put(DefaultSunSpecModel.S_160, Priority.LOW) //
 			.build();
 
 	private static final int READ_FROM_MODBUS_BLOCK = 1;
@@ -70,6 +76,8 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 
 	@Reference
 	private ConfigurationAdmin cm;
+	
+	private Config config;	
 
 	@Reference(policy = ReferencePolicy.STATIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.MANDATORY)
 	protected void setModbus(BridgeModbus modbus) {
@@ -94,6 +102,7 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 				config.modbusUnitId(), this.cm, "Modbus", config.modbus_id(), READ_FROM_MODBUS_BLOCK, Phase.ALL)) {
 			return;
 		}
+		this.config = config;
 	}
 
 	@Override
@@ -115,6 +124,43 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 
 	}
 
+	public void PVDataHandler() throws OpenemsNamedException {
+
+		if (this.isSunSpecInitializationCompleted()) {
+			FloatReadChannel st1DcPowerChannel = this.channel(DefaultSunSpecModel.S160.MODULE_1_DCW.getChannelId());
+			int st1DcPowerValue = st1DcPowerChannel.value().getOrError().intValue();
+			this._setSt1DcPower(st1DcPowerValue);
+
+			FloatReadChannel st2DcPowerChannel = this.channel(DefaultSunSpecModel.S160.MODULE_2_DCW.getChannelId());
+			int st2DcPowerValue = st2DcPowerChannel.value().getOrError().intValue();
+			this._setSt2DcPower(st2DcPowerValue);
+
+			this.logDebug(this.log, "Reading Power Values DC1 / DC2: " + st1DcPowerValue + " / " + st2DcPowerValue + " W");
+
+			FloatReadChannel st1DcCurrentChannel = this.channel(DefaultSunSpecModel.S160.MODULE_1_DCA.getChannelId());
+			int st1DcCurrentValue = st1DcCurrentChannel.value().getOrError().intValue();
+			this._setSt1DcCurrent(st1DcCurrentValue);
+
+			FloatReadChannel st2DcCurrentChannel = this.channel(DefaultSunSpecModel.S160.MODULE_2_DCA.getChannelId());
+			int st2DcCurrentValue = st2DcCurrentChannel.value().getOrError().intValue();
+			this._setSt2DcCurrent(st2DcCurrentValue);
+
+			this.logDebug(this.log, "Reading Current Values DC1 / DC2: " + st1DcCurrentValue + " / " + st2DcCurrentValue + " A");
+
+			FloatReadChannel st1DcVoltageChannel = this.channel(DefaultSunSpecModel.S160.MODULE_1_DCV.getChannelId());
+			int st1DcVoltageValue = st1DcVoltageChannel.value().getOrError().intValue();
+			this._setSt1DcVoltage(st1DcVoltageValue);
+
+			FloatReadChannel st2DcVoltageChannel = this.channel(DefaultSunSpecModel.S160.MODULE_2_DCV.getChannelId());
+			int st2DcVoltageValue = st2DcVoltageChannel.value().getOrError().intValue();
+			this._setSt2DcVoltage(st2DcVoltageValue);
+
+			this.logDebug(this.log, "Reading Voltage Values DC1 / DC2: " + st1DcVoltageValue + " / " + st2DcVoltageValue + " V");
+		} else {
+			log.info("SunSpec model not completely initialized. Skipping PVDataHandler");
+		}
+	}
+
 	@Deactivate
 	protected void deactivate() {
 		super.deactivate();
@@ -123,6 +169,20 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 	@Override
 	public void handleEvent(Event event) {
 		super.handleEvent(event);
+
+		switch (event.getTopic()) {
+
+		case EdgeEventConstants.TOPIC_CYCLE_AFTER_PROCESS_IMAGE:
+
+			try {
+
+				this.PVDataHandler();
+			} catch (OpenemsNamedException e) {
+				log.warn("Cannot write S160 data yet");
+			}
+
+			break;
+		}
 	}
 
 	@Override
@@ -131,5 +191,15 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 				OpenemsComponent.getModbusSlaveNatureTable(accessMode), //
 				ElectricityMeter.getModbusSlaveNatureTable(accessMode), //
 				ManagedSymmetricPvInverter.getModbusSlaveNatureTable(accessMode));
+	}
+
+	/**
+	 * Uses Info Log for further debug features.
+	 */
+	@Override
+	protected void logDebug(Logger log, String message) {
+		if (this.config.debugMode()) {
+			this.logInfo(this.log, message);
+		}
 	}
 }

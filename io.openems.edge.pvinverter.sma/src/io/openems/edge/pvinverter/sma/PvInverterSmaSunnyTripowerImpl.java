@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableMap;
 import io.openems.common.channel.AccessMode;
 import io.openems.common.exceptions.OpenemsException;
 import io.openems.edge.bridge.modbus.api.BridgeModbus;
+import io.openems.edge.bridge.modbus.api.ElementToChannelConverter;
 import io.openems.edge.bridge.modbus.api.ModbusComponent;
 import io.openems.edge.bridge.modbus.sunspec.DefaultSunSpecModel;
 import io.openems.edge.bridge.modbus.sunspec.SunSpecModel;
@@ -53,12 +54,13 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 	private static final Map<SunSpecModel, Priority> ACTIVE_MODELS = ImmutableMap.<SunSpecModel, Priority>builder()
 			// before 2023
 			.put(DefaultSunSpecModel.S_1, Priority.LOW) // from 40002
-			//.put(DefaultSunSpecModel.S_101, Priority.LOW) // from 40081
+			// .put(DefaultSunSpecModel.S_101, Priority.LOW) // from 40081
 			.put(DefaultSunSpecModel.S_103, Priority.HIGH) // from 40185
 			.put(DefaultSunSpecModel.S_120, Priority.LOW) // from 40237
-			//.put(DefaultSunSpecModel.S_121, Priority.LOW) // from 40265
-			//.put(DefaultSunSpecModel.S_122, Priority.LOW) // from 40297
+			// .put(DefaultSunSpecModel.S_121, Priority.LOW) // from 40265
+			// .put(DefaultSunSpecModel.S_122, Priority.LOW) // from 40297
 			.put(DefaultSunSpecModel.S_123, Priority.LOW) // from 40343 before 2023, from 40070 since 2023
+			.put(DefaultSunSpecModel.S_160, Priority.LOW) //
 			// since 2023
 			.put(DefaultSunSpecModel.S_701, Priority.HIGH) // from 40096
 			.put(DefaultSunSpecModel.S_704, Priority.LOW) // from 40251
@@ -129,6 +131,39 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 	@Override
 	public void handleEvent(Event event) {
 		super.handleEvent(event);
+	}
+
+	@Override
+	protected void onSunSpecInitializationCompleted() {
+		this.mapFirstPointToChannel(//
+				PvInverterSmaSunnyTripower.ChannelId.ST1_DC_POWER, //
+				ElementToChannelConverter.DIRECT_1_TO_1, //
+				DefaultSunSpecModel.S160.MODULE_1_DCW);
+
+		this.mapFirstPointToChannel(//
+				PvInverterSmaSunnyTripower.ChannelId.ST2_DC_POWER, //
+				ElementToChannelConverter.DIRECT_1_TO_1, //
+				DefaultSunSpecModel.S160.MODULE_2_DCW);
+
+		this.mapFirstPointToChannel(//
+				PvInverterSmaSunnyTripower.ChannelId.ST1_DC_CURRENT, //
+				ElementToChannelConverter.DIRECT_1_TO_1, //
+				DefaultSunSpecModel.S160.MODULE_1_DCA);
+
+		this.mapFirstPointToChannel(//
+				PvInverterSmaSunnyTripower.ChannelId.ST2_DC_CURRENT, //
+				ElementToChannelConverter.DIRECT_1_TO_1, //
+				DefaultSunSpecModel.S160.MODULE_2_DCA);
+
+		this.mapFirstPointToChannel(//
+				PvInverterSmaSunnyTripower.ChannelId.ST1_DC_VOLTAGE, //
+				ElementToChannelConverter.DIRECT_1_TO_1, //
+				DefaultSunSpecModel.S160.MODULE_1_DCV);
+
+		this.mapFirstPointToChannel(//
+				PvInverterSmaSunnyTripower.ChannelId.ST2_DC_VOLTAGE, //
+				ElementToChannelConverter.DIRECT_1_TO_1, //
+				DefaultSunSpecModel.S160.MODULE_2_DCV);
 	}
 
 	@Override

@@ -31,6 +31,7 @@ import io.openems.edge.bridge.modbus.api.ModbusProtocol;
 import io.openems.edge.bridge.modbus.api.element.FloatDoublewordElement;
 import io.openems.edge.bridge.modbus.api.element.SignedDoublewordElement;
 import io.openems.edge.bridge.modbus.api.element.SignedWordElement;
+
 import io.openems.edge.bridge.modbus.api.element.UnsignedWordElement;
 import io.openems.edge.bridge.modbus.api.element.WordOrder;
 import io.openems.edge.bridge.modbus.api.task.FC16WriteRegistersTask;
@@ -159,6 +160,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 			.put(DefaultSunSpecModel.S_1, Priority.LOW) //
 			.put(DefaultSunSpecModel.S_103, Priority.LOW) //
 			.put(DefaultSunSpecModel.S_120, Priority.LOW) //
+			// .put(DefaultSunSpecModel.S_160, Priority.LOW) //
 			// .put(DefaultSunSpecModel.S_203, Priority.LOW) //
 
 			// .put(DefaultSunSpecModel.S_802, Priority.LOW) //
@@ -317,6 +319,37 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 								new SignedWordElement(0x9CA4)),
 						m(SolaredgeDcCharger.ChannelId.DC_POWER_SCALE, //
 								new SignedWordElement(0x9CA5))));
+
+		/*
+		 * Sunspec 160 only valid for synergy inverters protocol.addTask(// new
+		 * FC3ReadRegistersTask(40123, Priority.HIGH, // Inverter-side (PV production
+		 * DC)
+		 * 
+		 * // Scale factors m(SolaredgeDcCharger.ChannelId.STR_CURRENT_SF, // String DC
+		 * Current Scale FACTOR new SignedWordElement(40123)),
+		 * m(SolaredgeDcCharger.ChannelId.STR_VOLTAGE_SF, // String DC vOLATGE Scale
+		 * FACTOR new SignedWordElement(40124)),
+		 * m(SolaredgeDcCharger.ChannelId.STR_POWER_SF, // String DC vOLATGE Scale
+		 * FACTOR new SignedWordElement(40125)), new DummyRegisterElement(40126, 40139),
+		 * // Reserved
+		 * 
+		 * // m(SolaredgeDcCharger.ChannelId.ST1_DC_CURRENT, // new
+		 * SignedWordElement(40140)), m(SolaredgeDcCharger.ChannelId.ST1_DC_VOLTAGE, //
+		 * new SignedWordElement(40141)), m(SolaredgeDcCharger.ChannelId.ST1_DC_POWER,
+		 * // new SignedWordElement(40142)),
+		 * m(SolaredgeDcCharger.ChannelId.ST1_DC_ENERGY, new
+		 * UnsignedDoublewordElement(40143)), new DummyRegisterElement(40145, 40159), //
+		 * Reserved
+		 * 
+		 * m(SolaredgeDcCharger.ChannelId.ST2_DC_CURRENT, // new
+		 * SignedWordElement(40160)), m(SolaredgeDcCharger.ChannelId.ST2_DC_VOLTAGE, //
+		 * new SignedWordElement(40161)), m(SolaredgeDcCharger.ChannelId.ST2_DC_POWER,
+		 * // new SignedWordElement(40162)),
+		 * m(SolaredgeDcCharger.ChannelId.ST2_DC_ENERGY, new
+		 * UnsignedDoublewordElement(40163))
+		 * 
+		 * ));
+		 */
 	}
 
 	/**
@@ -524,7 +557,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 			this.setPowerPvLimitPercent(newLimitPercent);
 			this.commitPvPowerLimit(1); // Send '1' to commit changes
 			this.logDebug(this.log, "New Power Limit set to: " + newLimitPercent + "%");
-			this.isLimiting = true;			
+			this.isLimiting = true;
 			this.handleState(PvMode.LIMIT_ACTIVE);
 		} catch (OpenemsNamedException e) {
 			this.logDebug(this.log, "Failed to set PV Limit in percent: " + e.getMessage());
@@ -570,6 +603,7 @@ public class SolaredgeDcChargerImpl extends AbstractSunSpecDcCharger implements 
 			break;
 		case EdgeEventConstants.TOPIC_CYCLE_AFTER_PROCESS_IMAGE:
 			this._calculateAndSetActualPower();
+
 			// this._calculateAndSetPvPowerLimit(); called from ESS
 			break;
 		}

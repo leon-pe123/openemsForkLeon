@@ -313,8 +313,8 @@ public interface SolarEdgeHybridEss extends OpenemsComponent {
 		SET_CONTROL_MODE(Doc.of(ControlMode.values()).accessMode(AccessMode.WRITE_ONLY)),
 
 		/**
-		 * AC-Current L1 produced by the ESS. Either for grid or consumption.
-		 * Always positive.
+		 * AC-Current L1 produced by the ESS. Either for grid or consumption. Always
+		 * positive.
 		 * <ul>
 		 * <li>Interface: Ess
 		 * <li>Type: Integer
@@ -327,8 +327,8 @@ public interface SolarEdgeHybridEss extends OpenemsComponent {
 				.persistencePriority(PersistencePriority.LOW)),
 
 		/**
-		 * AC-Current L2 produced by the ESS. Either for grid or consumption.
-		 * Always positive.
+		 * AC-Current L2 produced by the ESS. Either for grid or consumption. Always
+		 * positive.
 		 * <ul>
 		 * <li>Interface: Ess
 		 * <li>Type: Integer
@@ -341,8 +341,8 @@ public interface SolarEdgeHybridEss extends OpenemsComponent {
 				.persistencePriority(PersistencePriority.LOW)),
 
 		/**
-		 * AC-Current L3 produced by the ESS. Either for grid or consumption.
-		 * Always positive.
+		 * AC-Current L3 produced by the ESS. Either for grid or consumption. Always
+		 * positive.
 		 * <ul>
 		 * <li>Interface: Ess
 		 * <li>Type: Integer
@@ -590,6 +590,23 @@ public interface SolarEdgeHybridEss extends OpenemsComponent {
 				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**
+		 * Storage Backup Reserved Setting sets the percentage of reserved battery SOE
+		 * to be used for backup purposes. Relevant only for inverters with backup
+		 * functionality.
+		 * 
+		 * Channel not used. Backup limit is controlled by OpenEMS.
+		 * <ul>
+		 * <li>Interface: Ess
+		 * <li>Type: Integer
+		 * <li>Unit: Percent
+		 * <li>
+		 * </ul>
+		 */
+		SET_STORAGE_BACKUP_LIMIT(Doc.of(OpenemsType.INTEGER) // Percent. Only relevant for backup systems
+				.unit(Unit.PERCENT) //
+				.persistencePriority(PersistencePriority.HIGH)),
+
+		/**
 		 * State Of Health.
 		 *
 		 * <ul>
@@ -619,22 +636,6 @@ public interface SolarEdgeHybridEss extends OpenemsComponent {
 				.unit(Unit.PERCENT) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
-		/**
-		 * Storage Backup Reserved Setting sets the percentage of reserved battery SOE
-		 * to be used for backup purposes. Relevant only for inverters with backup
-		 * functionality.
-		 * 
-		 * Channel not used. Backup limit is controlled by OpenEMS.
-		 * <ul>
-		 * <li>Interface: Ess
-		 * <li>Type: Integer
-		 * <li>Unit: Percent
-		 * <li>
-		 * </ul>
-		 */
-		SET_STORAGE_BACKUP_LIMIT(Doc.of(OpenemsType.INTEGER) // Percent. Only relevant for backup systems
-				.unit(Unit.PERCENT) //
-				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**
 		 * Current useable capacity of battery.
@@ -1350,6 +1351,7 @@ public interface SolarEdgeHybridEss extends OpenemsComponent {
 	public default void setRemoteControlTimeout(Integer value) throws OpenemsNamedException {
 		this.getSetRemoteControlTimeoutChannel().setNextWriteValue(value);
 	}
+
 
 	/**
 	 * Gets the Channel for {@link ChannelId#USEABLE_CAPACITY}.

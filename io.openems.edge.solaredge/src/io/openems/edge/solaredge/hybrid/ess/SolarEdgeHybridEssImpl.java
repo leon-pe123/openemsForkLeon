@@ -44,6 +44,7 @@ import io.openems.edge.bridge.modbus.sunspec.DefaultSunSpecModel;
 import io.openems.edge.bridge.modbus.sunspec.SunSpecModel;
 
 import io.openems.edge.common.channel.EnumReadChannel;
+
 import io.openems.edge.common.component.ComponentManager;
 import io.openems.edge.common.component.OpenemsComponent;
 import io.openems.edge.common.modbusslave.ModbusSlave;
@@ -61,6 +62,7 @@ import io.openems.edge.ess.power.api.Power;
 
 import io.openems.edge.meter.api.ElectricityMeter;
 import io.openems.edge.pvinverter.api.ManagedSymmetricPvInverter;
+import io.openems.edge.pvinverter.sunspec.SunSpecPvInverter;
 import io.openems.edge.solaredge.enums.ControlMode;
 import io.openems.edge.solaredge.enums.PvMode;
 import io.openems.edge.timedata.api.Timedata;
@@ -138,6 +140,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 	private static final Map<SunSpecModel, Priority> ACTIVE_MODELS = ImmutableMap.<SunSpecModel, Priority>builder()
 			.put(DefaultSunSpecModel.S_1, Priority.LOW) //
 			.put(DefaultSunSpecModel.S_103, Priority.LOW) //
+			.put(DefaultSunSpecModel.S_160, Priority.LOW) //
 			.put(DefaultSunSpecModel.S_203, Priority.LOW) //
 			.put(DefaultSunSpecModel.S_802, Priority.LOW) //
 			.build();
@@ -171,6 +174,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 				SymmetricEss.ChannelId.values(), //
 				HybridEss.ChannelId.values(), //
 				ManagedSymmetricEss.ChannelId.values(), //
+				SunSpecPvInverter.ChannelId.values(), //				
 				SolarEdgeHybridEss.ChannelId.values());
 
 		if (DEBUG_MODE == false) {
@@ -224,6 +228,7 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 
 			this._setMyActivePower();
 			this.calculateEnergy();
+
 			break;
 		}
 	}
@@ -690,6 +695,8 @@ public class SolarEdgeHybridEssImpl extends AbstractSunSpecEss implements SolarE
 		}
 
 	}
+
+
 
 	/**
 	 * Adds static modbus tasks.
