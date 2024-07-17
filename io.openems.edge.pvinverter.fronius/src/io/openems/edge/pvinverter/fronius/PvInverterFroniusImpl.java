@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 
 import io.openems.common.channel.AccessMode;
+import io.openems.common.exceptions.InvalidValueException;
 import io.openems.common.exceptions.OpenemsException;
 import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
 import io.openems.edge.bridge.modbus.api.BridgeModbus;
@@ -127,45 +128,72 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 	public void PVDataHandler() throws OpenemsNamedException {
 
 		if (this.isSunSpecInitializationCompleted()) {
-			FloatReadChannel st1DcPowerChannel = this.channel(DefaultSunSpecModel.S160.MODULE_1_DCW.getChannelId());
-			int st1DcPowerValue = st1DcPowerChannel.value().getOrError().intValue();
-			this._setSt1DcPower(st1DcPowerValue);
+			try {
+				FloatReadChannel st1DcPowerChannel = this.channel(DefaultSunSpecModel.S160.MODULE_1_DCW.getChannelId());
+				int st1DcPowerValue = st1DcPowerChannel.value().getOrError().intValue();
+				this._setSt1DcPower(st1DcPowerValue);
 
-			FloatReadChannel st2DcPowerChannel = this.channel(DefaultSunSpecModel.S160.MODULE_2_DCW.getChannelId());
-			int st2DcPowerValue = st2DcPowerChannel.value().getOrError().intValue();
-			this._setSt2DcPower(st2DcPowerValue);
+				FloatReadChannel st2DcPowerChannel = this.channel(DefaultSunSpecModel.S160.MODULE_2_DCW.getChannelId());
+				int st2DcPowerValue = st2DcPowerChannel.value().getOrError().intValue();
+				this._setSt2DcPower(st2DcPowerValue);
 
-			this.logDebug(this.log, "Reading Power Values DC1 / DC2: " + st1DcPowerValue + " / " + st2DcPowerValue + " W");
-			
-			FloatReadChannel st1DcEnergyChannel = this.channel(DefaultSunSpecModel.S160.MODULE_1_DCWH.getChannelId());
-			int st1DcEnergyValue = st1DcEnergyChannel.value().getOrError().intValue();
-			this._setSt1DcEnergy(st1DcEnergyValue);
+				this.logDebug(this.log,
+						"Reading Power Values DC1 / DC2: " + st1DcPowerValue + " / " + st2DcPowerValue + " W");
+			} catch (InvalidValueException e) {
+				this.logDebug(this.log, "NO DATA for Power Values DC1 / DC2: " + e.getMessage());
+			}
 
-			FloatReadChannel st2DcEnergyChannel = this.channel(DefaultSunSpecModel.S160.MODULE_2_DCWH.getChannelId());
-			int st2DcEnergyValue = st2DcEnergyChannel.value().getOrError().intValue();
-			this._setSt2DcEnergy(st2DcEnergyValue);
+			try {
+				FloatReadChannel st1DcEnergyChannel = this
+						.channel(DefaultSunSpecModel.S160.MODULE_1_DCWH.getChannelId());
+				int st1DcEnergyValue = st1DcEnergyChannel.value().getOrError().intValue();
+				this._setSt1DcEnergy(st1DcEnergyValue);
 
-			this.logDebug(this.log, "Reading Energy Values DC1 / DC2: " + st1DcEnergyValue + " / " + st2DcEnergyValue + " Wh");			
+				FloatReadChannel st2DcEnergyChannel = this
+						.channel(DefaultSunSpecModel.S160.MODULE_2_DCWH.getChannelId());
+				int st2DcEnergyValue = st2DcEnergyChannel.value().getOrError().intValue();
+				this._setSt2DcEnergy(st2DcEnergyValue);
 
-			FloatReadChannel st1DcCurrentChannel = this.channel(DefaultSunSpecModel.S160.MODULE_1_DCA.getChannelId());
-			int st1DcCurrentValue = st1DcCurrentChannel.value().getOrError().intValue();
-			this._setSt1DcCurrent(st1DcCurrentValue);
+				this.logDebug(this.log,
+						"Reading Energy Values DC1 / DC2: " + st1DcEnergyValue + " / " + st2DcEnergyValue + " Wh");
+			} catch (InvalidValueException e) {
+				this.logDebug(this.log, "NO DATA for Energy Values DC1 / DC2: " + e.getMessage());
+			}
 
-			FloatReadChannel st2DcCurrentChannel = this.channel(DefaultSunSpecModel.S160.MODULE_2_DCA.getChannelId());
-			int st2DcCurrentValue = st2DcCurrentChannel.value().getOrError().intValue();
-			this._setSt2DcCurrent(st2DcCurrentValue);
+			try {
+				FloatReadChannel st1DcCurrentChannel = this
+						.channel(DefaultSunSpecModel.S160.MODULE_1_DCA.getChannelId());
+				int st1DcCurrentValue = st1DcCurrentChannel.value().getOrError().intValue();
+				this._setSt1DcCurrent(st1DcCurrentValue);
 
-			this.logDebug(this.log, "Reading Current Values DC1 / DC2: " + st1DcCurrentValue + " / " + st2DcCurrentValue + " A");
+				FloatReadChannel st2DcCurrentChannel = this
+						.channel(DefaultSunSpecModel.S160.MODULE_2_DCA.getChannelId());
+				int st2DcCurrentValue = st2DcCurrentChannel.value().getOrError().intValue();
+				this._setSt2DcCurrent(st2DcCurrentValue);
 
-			FloatReadChannel st1DcVoltageChannel = this.channel(DefaultSunSpecModel.S160.MODULE_1_DCV.getChannelId());
-			int st1DcVoltageValue = st1DcVoltageChannel.value().getOrError().intValue();
-			this._setSt1DcVoltage(st1DcVoltageValue);
+				this.logDebug(this.log,
+						"Reading Current Values DC1 / DC2: " + st1DcCurrentValue + " / " + st2DcCurrentValue + " A");
+			} catch (InvalidValueException e) {
+				this.logDebug(this.log, "NO DATA for Current Values DC1 / DC2: " + e.getMessage());
+			}
 
-			FloatReadChannel st2DcVoltageChannel = this.channel(DefaultSunSpecModel.S160.MODULE_2_DCV.getChannelId());
-			int st2DcVoltageValue = st2DcVoltageChannel.value().getOrError().intValue();
-			this._setSt2DcVoltage(st2DcVoltageValue);
+			try {
+				FloatReadChannel st1DcVoltageChannel = this
+						.channel(DefaultSunSpecModel.S160.MODULE_1_DCV.getChannelId());
+				int st1DcVoltageValue = st1DcVoltageChannel.value().getOrError().intValue();
+				this._setSt1DcVoltage(st1DcVoltageValue);
 
-			this.logDebug(this.log, "Reading Voltage Values DC1 / DC2: " + st1DcVoltageValue + " / " + st2DcVoltageValue + " V");
+				FloatReadChannel st2DcVoltageChannel = this
+						.channel(DefaultSunSpecModel.S160.MODULE_2_DCV.getChannelId());
+				int st2DcVoltageValue = st2DcVoltageChannel.value().getOrError().intValue();
+				this._setSt2DcVoltage(st2DcVoltageValue);
+
+				this.logDebug(this.log,
+						"Reading Voltage Values DC1 / DC2: " + st1DcVoltageValue + " / " + st2DcVoltageValue + " V");
+			} catch (InvalidValueException e) {
+				this.logDebug(this.log, "NO DATA for Voltage Values DC1 / DC2: " + e.getMessage());
+			}
+
 		} else {
 			log.info("SunSpec model not completely initialized. Skipping PVDataHandler");
 		}
