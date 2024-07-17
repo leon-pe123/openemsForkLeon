@@ -49,6 +49,34 @@ public interface PvInverterFronius extends SunSpecPvInverter, ManagedSymmetricPv
 				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**
+		 * String 1 DC-Energy.
+		 *
+		 * <ul>
+		 * <li>Interface: PvInverter
+		 * <li>Type: Integer
+		 * <li>Unit: WattHours
+		 * <li>
+		 * </ul>
+		 */
+		ST1_DC_ENERGY(Doc.of(OpenemsType.INTEGER) //
+				.unit(Unit.WATT_HOURS) //
+				.persistencePriority(PersistencePriority.HIGH)),
+
+		/**
+		 * String 2 DC-Energy.
+		 *
+		 * <ul>
+		 * <li>Interface: PvInverter
+		 * <li>Type: Integer
+		 * <li>Unit: WattHours
+		 * <li>
+		 * </ul>
+		 */
+		ST2_DC_ENERGY(Doc.of(OpenemsType.INTEGER) //
+				.unit(Unit.WATT_HOURS) //
+				.persistencePriority(PersistencePriority.HIGH)),
+
+		/**
 		 * String 1 DC-Power.
 		 *
 		 * <ul>
@@ -140,6 +168,30 @@ public interface PvInverterFronius extends SunSpecPvInverter, ManagedSymmetricPv
 		this.getSt2DcCurrentChannel().setNextValue(value);
 	}
 
+	public default IntegerReadChannel getSt1DcEnergyChannel() {
+		return this.channel(ChannelId.ST1_DC_ENERGY);
+	}
+
+	public default Value<Integer> getSt1DcEnergy() {
+		return this.getSt1DcEnergyChannel().value();
+	}
+
+	public default void _setSt1DcEnergy(int value) {
+		this.getSt1DcEnergyChannel().setNextValue(value);
+	}
+
+	public default IntegerReadChannel getSt2DcEnergyChannel() {
+		return this.channel(ChannelId.ST2_DC_ENERGY);
+	}
+
+	public default Value<Integer> getSt2DcEnergy() {
+		return this.getSt2DcEnergyChannel().value();
+	}
+
+	public default void _setSt2DcEnergy(int value) {
+		this.getSt2DcEnergyChannel().setNextValue(value);
+	}
+
 	public default IntegerReadChannel getSt1DcPowerChannel() {
 		return this.channel(ChannelId.ST1_DC_POWER);
 	}
@@ -175,7 +227,6 @@ public interface PvInverterFronius extends SunSpecPvInverter, ManagedSymmetricPv
 	public default void _setSt1DcVoltage(int value) {
 		this.getSt1DcVoltageChannel().setNextValue(value);
 	}
-
 
 	public default IntegerReadChannel getSt2DcVoltageChannel() {
 		return this.channel(ChannelId.ST2_DC_VOLTAGE);

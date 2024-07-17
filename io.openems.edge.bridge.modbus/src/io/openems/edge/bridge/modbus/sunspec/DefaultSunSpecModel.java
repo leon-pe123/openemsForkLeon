@@ -2796,7 +2796,7 @@ public enum DefaultSunSpecModel implements SunSpecModel {
 				ValuePoint.Type.UINT16, false , AccessMode.READ_ONLY, Unit.WATT, "Dcw_SF")), //
 		MODULE_1_DCWH(new ScaledValuePoint("S160_MODULE_1_DCWH", "Module1DcWh", //
 				"Module1Dcwh", //
-				ValuePoint.Type.UINT32, false , AccessMode.READ_ONLY, Unit.WATT_HOURS, "Dcwh_SF")), //	
+				ValuePoint.Type.ACC32, false , AccessMode.READ_ONLY, Unit.WATT_HOURS, "Dcwh_SF")), //	
 		MODULE_1_TMS(new ValuePoint("S160_MODULE_1_TMS", "Module1Tms", //
 				"Module1Tms", //
 				ValuePoint.Type.UINT32, false , AccessMode.READ_ONLY, Unit.SECONDS)), //	
@@ -2833,7 +2833,7 @@ public enum DefaultSunSpecModel implements SunSpecModel {
 		        ValuePoint.Type.UINT16, false , AccessMode.READ_ONLY, Unit.WATT, "Dcw_SF")), //
 		MODULE_2_DCWH(new ScaledValuePoint("S160_MODULE_2_DCWH", "Module2DcWh", //
 		        "Module2Dcwh", //
-		        ValuePoint.Type.UINT32, false , AccessMode.READ_ONLY, Unit.WATT_HOURS, "Dcwh_SF")), //
+		        ValuePoint.Type.ACC32, false , AccessMode.READ_ONLY, Unit.WATT_HOURS, "Dcwh_SF")), //
 		MODULE_2_TMS(new ValuePoint("S160_MODULE_2_TMS", "Module2Tms", //
 		        "Module2Tms", //
 		        ValuePoint.Type.UINT32, false , AccessMode.READ_ONLY, Unit.SECONDS)), //

@@ -136,6 +136,16 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 			this._setSt2DcPower(st2DcPowerValue);
 
 			this.logDebug(this.log, "Reading Power Values DC1 / DC2: " + st1DcPowerValue + " / " + st2DcPowerValue + " W");
+			
+			FloatReadChannel st1DcEnergyChannel = this.channel(DefaultSunSpecModel.S160.MODULE_1_DCWH.getChannelId());
+			int st1DcEnergyValue = st1DcEnergyChannel.value().getOrError().intValue();
+			this._setSt1DcEnergy(st1DcEnergyValue);
+
+			FloatReadChannel st2DcEnergyChannel = this.channel(DefaultSunSpecModel.S160.MODULE_2_DCWH.getChannelId());
+			int st2DcEnergyValue = st2DcEnergyChannel.value().getOrError().intValue();
+			this._setSt2DcEnergy(st2DcEnergyValue);
+
+			this.logDebug(this.log, "Reading Energy Values DC1 / DC2: " + st1DcEnergyValue + " / " + st2DcEnergyValue + " Wh");			
 
 			FloatReadChannel st1DcCurrentChannel = this.channel(DefaultSunSpecModel.S160.MODULE_1_DCA.getChannelId());
 			int st1DcCurrentValue = st1DcCurrentChannel.value().getOrError().intValue();

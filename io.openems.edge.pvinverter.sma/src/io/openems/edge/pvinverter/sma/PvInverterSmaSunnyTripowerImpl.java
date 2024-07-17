@@ -16,16 +16,18 @@ import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
 import org.osgi.service.event.propertytypes.EventTopics;
 import org.osgi.service.metatype.annotations.Designate;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
-
 import io.openems.common.channel.AccessMode;
 import io.openems.common.exceptions.OpenemsException;
+import io.openems.common.exceptions.InvalidValueException;
+import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
 import io.openems.edge.bridge.modbus.api.BridgeModbus;
-import io.openems.edge.bridge.modbus.api.ElementToChannelConverter;
 import io.openems.edge.bridge.modbus.api.ModbusComponent;
 import io.openems.edge.bridge.modbus.sunspec.DefaultSunSpecModel;
 import io.openems.edge.bridge.modbus.sunspec.SunSpecModel;
+import io.openems.edge.common.channel.FloatReadChannel;
 import io.openems.edge.common.component.OpenemsComponent;
 import io.openems.edge.common.event.EdgeEventConstants;
 import io.openems.edge.common.modbusslave.ModbusSlave;
@@ -93,8 +95,12 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 
 	private static final int READ_FROM_MODBUS_BLOCK = 1;
 
+	private final Logger log = LoggerFactory.getLogger(PvInverterSmaSunnyTripowerImpl.class);
+
 	@Reference
 	private ConfigurationAdmin cm;
+
+	private Config config;
 
 	@Override
 	@Reference(policy = ReferencePolicy.STATIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.MANDATORY)
@@ -120,6 +126,7 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 				config.modbusUnitId(), this.cm, "Modbus", config.modbus_id(), READ_FROM_MODBUS_BLOCK, config.phase())) {
 			return;
 		}
+		this.config = config;
 	}
 
 	@Override
@@ -131,39 +138,94 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 	@Override
 	public void handleEvent(Event event) {
 		super.handleEvent(event);
+		switch (event.getTopic()) {
+
+		case EdgeEventConstants.TOPIC_CYCLE_EXECUTE_WRITE:
+
+			try {
+
+				this.PVDataHandler();
+			} catch (OpenemsNamedException e) {
+				log.warn("Cannot write S160 data yet");
+			}
+
+			break;
+		}
+
 	}
 
-	@Override
-	protected void onSunSpecInitializationCompleted() {
-		this.mapFirstPointToChannel(//
-				PvInverterSmaSunnyTripower.ChannelId.ST1_DC_POWER, //
-				ElementToChannelConverter.DIRECT_1_TO_1, //
-				DefaultSunSpecModel.S160.MODULE_1_DCW);
+	public void PVDataHandler() throws OpenemsNamedException {
 
-		this.mapFirstPointToChannel(//
-				PvInverterSmaSunnyTripower.ChannelId.ST2_DC_POWER, //
-				ElementToChannelConverter.DIRECT_1_TO_1, //
-				DefaultSunSpecModel.S160.MODULE_2_DCW);
+		if (this.isSunSpecInitializationCompleted()) {
+			try {
+				FloatReadChannel st1DcPowerChannel = this.channel(DefaultSunSpecModel.S160.MODULE_1_DCW.getChannelId());
+				int st1DcPowerValue = st1DcPowerChannel.value().getOrError().intValue();
+				this._setSt1DcPower(st1DcPowerValue);
 
-		this.mapFirstPointToChannel(//
-				PvInverterSmaSunnyTripower.ChannelId.ST1_DC_CURRENT, //
-				ElementToChannelConverter.DIRECT_1_TO_1, //
-				DefaultSunSpecModel.S160.MODULE_1_DCA);
+				FloatReadChannel st2DcPowerChannel = this.channel(DefaultSunSpecModel.S160.MODULE_2_DCW.getChannelId());
+				int st2DcPowerValue = st2DcPowerChannel.value().getOrError().intValue();
+				this._setSt2DcPower(st2DcPowerValue);
 
-		this.mapFirstPointToChannel(//
-				PvInverterSmaSunnyTripower.ChannelId.ST2_DC_CURRENT, //
-				ElementToChannelConverter.DIRECT_1_TO_1, //
-				DefaultSunSpecModel.S160.MODULE_2_DCA);
+				this.logDebug(this.log,
+						"Reading Power Values DC1 / DC2: " + st1DcPowerValue + " / " + st2DcPowerValue + " W");
+			} catch (InvalidValueException e) {
+				this.logDebug(this.log, "NO DATA for Power Values DC1 / DC2: " + e.getMessage());
+			}
 
-		this.mapFirstPointToChannel(//
-				PvInverterSmaSunnyTripower.ChannelId.ST1_DC_VOLTAGE, //
-				ElementToChannelConverter.DIRECT_1_TO_1, //
-				DefaultSunSpecModel.S160.MODULE_1_DCV);
+			try {
+				FloatReadChannel st1DcEnergyChannel = this
+						.channel(DefaultSunSpecModel.S160.MODULE_1_DCWH.getChannelId());
+				int st1DcEnergyValue = st1DcEnergyChannel.value().getOrError().intValue();
+				this._setSt1DcEnergy(st1DcEnergyValue);
 
-		this.mapFirstPointToChannel(//
-				PvInverterSmaSunnyTripower.ChannelId.ST2_DC_VOLTAGE, //
-				ElementToChannelConverter.DIRECT_1_TO_1, //
-				DefaultSunSpecModel.S160.MODULE_2_DCV);
+				FloatReadChannel st2DcEnergyChannel = this
+						.channel(DefaultSunSpecModel.S160.MODULE_2_DCWH.getChannelId());
+				int st2DcEnergyValue = st2DcEnergyChannel.value().getOrError().intValue();
+				this._setSt2DcEnergy(st2DcEnergyValue);
+
+				this.logDebug(this.log,
+						"Reading Energy Values DC1 / DC2: " + st1DcEnergyValue + " / " + st2DcEnergyValue + " Wh");
+			} catch (InvalidValueException e) {
+				this.logDebug(this.log, "NO DATA for Energy Values DC1 / DC2: " + e.getMessage());
+			}
+
+			try {
+				FloatReadChannel st1DcCurrentChannel = this
+						.channel(DefaultSunSpecModel.S160.MODULE_1_DCA.getChannelId());
+				int st1DcCurrentValue = st1DcCurrentChannel.value().getOrError().intValue();
+				this._setSt1DcCurrent(st1DcCurrentValue);
+
+				FloatReadChannel st2DcCurrentChannel = this
+						.channel(DefaultSunSpecModel.S160.MODULE_2_DCA.getChannelId());
+				int st2DcCurrentValue = st2DcCurrentChannel.value().getOrError().intValue();
+				this._setSt2DcCurrent(st2DcCurrentValue);
+
+				this.logDebug(this.log,
+						"Reading Current Values DC1 / DC2: " + st1DcCurrentValue + " / " + st2DcCurrentValue + " A");
+			} catch (InvalidValueException e) {
+				this.logDebug(this.log, "NO DATA for Current Values DC1 / DC2: " + e.getMessage());
+			}
+
+			try {
+				FloatReadChannel st1DcVoltageChannel = this
+						.channel(DefaultSunSpecModel.S160.MODULE_1_DCV.getChannelId());
+				int st1DcVoltageValue = st1DcVoltageChannel.value().getOrError().intValue();
+				this._setSt1DcVoltage(st1DcVoltageValue);
+
+				FloatReadChannel st2DcVoltageChannel = this
+						.channel(DefaultSunSpecModel.S160.MODULE_2_DCV.getChannelId());
+				int st2DcVoltageValue = st2DcVoltageChannel.value().getOrError().intValue();
+				this._setSt2DcVoltage(st2DcVoltageValue);
+
+				this.logDebug(this.log,
+						"Reading Voltage Values DC1 / DC2: " + st1DcVoltageValue + " / " + st2DcVoltageValue + " V");
+			} catch (InvalidValueException e) {
+				this.logDebug(this.log, "NO DATA for Voltage Values DC1 / DC2: " + e.getMessage());
+			}
+
+		} else {
+			log.info("SunSpec model not completely initialized. Skipping PVDataHandler");
+		}
 	}
 
 	@Override
@@ -172,5 +234,15 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 				OpenemsComponent.getModbusSlaveNatureTable(accessMode), //
 				ElectricityMeter.getModbusSlaveNatureTable(accessMode), //
 				ManagedSymmetricPvInverter.getModbusSlaveNatureTable(accessMode));
+	}
+
+	/**
+	 * Uses Info Log for further debug features.
+	 */
+	@Override
+	protected void logDebug(Logger log, String message) {
+		if (this.config.debugMode()) {
+			this.logInfo(this.log, message);
+		}
 	}
 }

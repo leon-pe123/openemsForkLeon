@@ -21,6 +21,9 @@ import io.openems.edge.pvinverter.sunspec.Phase;
 	@AttributeDefinition(name = "Read-Only mode", description = "In Read-Only mode no power-limitation commands are sent to the inverter")
 	boolean readOnly() default true;
 
+	@AttributeDefinition(name = "Debug mode", description = "Extends Logging for debugging purposes")
+	boolean debugMode() default false;
+
 	@AttributeDefinition(name = "Modbus-ID", description = "ID of Modbus bridge.")
 	String modbus_id() default "modbus0";
 
