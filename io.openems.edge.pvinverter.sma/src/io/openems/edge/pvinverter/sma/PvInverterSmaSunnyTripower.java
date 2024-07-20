@@ -7,8 +7,6 @@ import io.openems.common.channel.Unit;
 import io.openems.common.types.OpenemsType;
 import io.openems.edge.bridge.modbus.api.ModbusComponent;
 import io.openems.edge.common.channel.Doc;
-import io.openems.edge.common.channel.IntegerReadChannel;
-import io.openems.edge.common.channel.value.Value;
 import io.openems.edge.common.component.OpenemsComponent;
 import io.openems.edge.common.modbusslave.ModbusSlave;
 import io.openems.edge.meter.api.ElectricityMeter;
@@ -19,9 +17,74 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		ModbusComponent, OpenemsComponent, EventHandler, ModbusSlave {
 
 	public enum ChannelId implements io.openems.edge.common.channel.ChannelId {
+		
+		/**
+		 * Number of Modules (DC-Inputs).
+		 *
+		 * <ul>
+		 * <li>Interface: PvInverter
+		 * <li>Type: Integer
+		 * <li>Unit: None
+		 * <li>
+		 * </ul>
+		 */
+		N(Doc.of(OpenemsType.INTEGER) //
+				.persistencePriority(PersistencePriority.HIGH)),		
 
 		/**
-		 * String 1 DC-Current.
+		 * Scale Factor for DC current.
+		 *
+		 * <ul>
+		 * <li>Interface: PvInverter
+		 * <li>Type: Integer
+		 * <li>Unit: None
+		 * <li>
+		 * </ul>
+		 */
+		DCA_SF(Doc.of(OpenemsType.INTEGER) //
+				.persistencePriority(PersistencePriority.LOW)),			
+		
+		/**
+		 * Scale Factor for DC voltage.
+		 *
+		 * <ul>
+		 * <li>Interface: PvInverter
+		 * <li>Type: Integer
+		 * <li>Unit: None
+		 * <li>
+		 * </ul>
+		 */
+		DCV_SF(Doc.of(OpenemsType.INTEGER) //
+				.persistencePriority(PersistencePriority.LOW)),				
+		
+		/**
+		 * Scale Factor of DC power.
+		 *
+		 * <ul>
+		 * <li>Interface: PvInverter
+		 * <li>Type: Integer
+		 * <li>Unit: None
+		 * <li>
+		 * </ul>
+		 */
+		DCW_SF(Doc.of(OpenemsType.INTEGER) //
+				.persistencePriority(PersistencePriority.LOW)),		
+		
+		/**
+		 * Scale Factor for DC energy. Usually 1.
+		 *
+		 * <ul>
+		 * <li>Interface: PvInverter
+		 * <li>Type: Integer
+		 * <li>Unit: None
+		 * <li>
+		 * </ul>
+		 */
+		DCWH_SF(Doc.of(OpenemsType.INTEGER) //
+				.persistencePriority(PersistencePriority.LOW)),				
+		
+		/**
+		 * Internal Value String 1 DC-Current. Scale Factor not applied.
 		 *
 		 * <ul>
 		 * <li>Interface: PvInverter
@@ -30,7 +93,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * <li>
 		 * </ul>
 		 */
-		ST1_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
+		ST1_DC_CURRENT_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.AMPERE) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
@@ -44,7 +107,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * <li>
 		 * </ul>
 		 */
-		ST2_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
+		ST2_DC_CURRENT_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.AMPERE) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
@@ -58,7 +121,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * <li>
 		 * </ul>
 		 */
-		ST1_DC_ENERGY(Doc.of(OpenemsType.INTEGER) //
+		ST1_DC_ENERGY_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT_HOURS) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
@@ -72,12 +135,12 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * <li>
 		 * </ul>
 		 */
-		ST2_DC_ENERGY(Doc.of(OpenemsType.INTEGER) //
+		ST2_DC_ENERGY_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT_HOURS) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**
-		 * String 1 DC-Voltage.
+		 * String 1 DC-Power.
 		 *
 		 * <ul>
 		 * <li>Interface: PvInverter
@@ -86,7 +149,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * <li>
 		 * </ul>
 		 */
-		ST1_DC_POWER(Doc.of(OpenemsType.INTEGER) //
+		ST1_DC_POWER_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
@@ -100,7 +163,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * <li>
 		 * </ul>
 		 */
-		ST2_DC_POWER(Doc.of(OpenemsType.INTEGER) //
+		ST2_DC_POWER_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
@@ -114,7 +177,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * <li>
 		 * </ul>
 		 */
-		ST1_DC_VOLTAGE(Doc.of(OpenemsType.INTEGER) //
+		ST1_DC_VOLTAGE_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.VOLT) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
@@ -128,11 +191,681 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * <li>
 		 * </ul>
 		 */
-		ST2_DC_VOLTAGE(Doc.of(OpenemsType.INTEGER) //
+		ST2_DC_VOLTAGE_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.VOLT) //
 				.persistencePriority(PersistencePriority.HIGH)),
+		
+	    /**
+	     * String 1 DC-Current.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: A
+	     * <li>
+	     * </ul>
+	     */
+	    ST1_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.AMPERE) //
+	            .persistencePriority(PersistencePriority.HIGH)),
 
-		;
+	    /**
+	     * String 1 DC-Energy.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: WattHours
+	     * <li>
+	     * </ul>
+	     */
+	    ST1_DC_ENERGY(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT_HOURS) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 1 DC-Power.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: W
+	     * <li>
+	     * </ul>
+	     */
+	    ST1_DC_POWER(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 1 DC-Voltage.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: V
+	     * <li>
+	     * </ul>
+	     */
+	    ST1_DC_VOLTAGE(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.VOLT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 2 DC-Current.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: A
+	     * <li>
+	     * </ul>
+	     */
+	    ST2_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.AMPERE) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 2 DC-Energy.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: WattHours
+	     * <li>
+	     * </ul>
+	     */
+	    ST2_DC_ENERGY(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT_HOURS) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 2 DC-Power.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: W
+	     * <li>
+	     * </ul>
+	     */
+	    ST2_DC_POWER(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 2 DC-Voltage.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: V
+	     * <li>
+	     * </ul>
+	     */
+	    ST2_DC_VOLTAGE(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.VOLT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 3 DC-Current.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: A
+	     * <li>
+	     * </ul>
+	     */
+	    ST3_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.AMPERE) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 3 DC-Energy.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: WattHours
+	     * <li>
+	     * </ul>
+	     */
+	    ST3_DC_ENERGY(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT_HOURS) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 3 DC-Power.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: W
+	     * <li>
+	     * </ul>
+	     */
+	    ST3_DC_POWER(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 3 DC-Voltage.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: V
+	     * <li>
+	     * </ul>
+	     */
+	    ST3_DC_VOLTAGE(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.VOLT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 4 DC-Current.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: A
+	     * <li>
+	     * </ul>
+	     */
+	    ST4_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.AMPERE) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 4 DC-Energy.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: WattHours
+	     * <li>
+	     * </ul>
+	     */
+	    ST4_DC_ENERGY(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT_HOURS) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 4 DC-Power.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: W
+	     * <li>
+	     * </ul>
+	     */
+	    ST4_DC_POWER(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 4 DC-Voltage.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: V
+	     * <li>
+	     * </ul>
+	     */
+	    ST4_DC_VOLTAGE(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.VOLT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 5 DC-Current.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: A
+	     * <li>
+	     * </ul>
+	     */
+	    ST5_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.AMPERE) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 5 DC-Energy.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: WattHours
+	     * <li>
+	     * </ul>
+	     */
+	    ST5_DC_ENERGY(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT_HOURS) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 5 DC-Power.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: W
+	     * <li>
+	     * </ul>
+	     */
+	    ST5_DC_POWER(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 5 DC-Voltage.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: V
+	     * <li>
+	     * </ul>
+	     */
+	    ST5_DC_VOLTAGE(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.VOLT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 6 DC-Current.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: A
+	     * <li>
+	     * </ul>
+	     */
+	    ST6_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.AMPERE) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 6 DC-Energy.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: WattHours
+	     * <li>
+	     * </ul>
+	     */
+	    ST6_DC_ENERGY(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT_HOURS) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 6 DC-Power.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: W
+	     * <li>
+	     * </ul>
+	     */
+	    ST6_DC_POWER(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 6 DC-Voltage.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: V
+	     * <li>
+	     * </ul>
+	     */
+	    ST6_DC_VOLTAGE(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.VOLT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 7 DC-Current.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: A
+	     * <li>
+	     * </ul>
+	     */
+	    ST7_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.AMPERE) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 7 DC-Energy.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: WattHours
+	     * <li>
+	     * </ul>
+	     */
+	    ST7_DC_ENERGY(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT_HOURS) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 7 DC-Power.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: W
+	     * <li>
+	     * </ul>
+	     */
+	    ST7_DC_POWER(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 7 DC-Voltage.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: V
+	     * <li>
+	     * </ul>
+	     */
+	    ST7_DC_VOLTAGE(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.VOLT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 8 DC-Current.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: A
+	     * <li>
+	     * </ul>
+	     */
+	    ST8_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.AMPERE) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 8 DC-Energy.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: WattHours
+	     * <li>
+	     * </ul>
+	     */
+	    ST8_DC_ENERGY(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT_HOURS) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 8 DC-Power.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: W
+	     * <li>
+	     * </ul>
+	     */
+	    ST8_DC_POWER(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 8 DC-Voltage.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: V
+	     * <li>
+	     * </ul>
+	     */
+	    ST8_DC_VOLTAGE(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.VOLT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 9 DC-Current.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: A
+	     * <li>
+	     * </ul>
+	     */
+	    ST9_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.AMPERE) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 9 DC-Energy.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: WattHours
+	     * <li>
+	     * </ul>
+	     */
+	    ST9_DC_ENERGY(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT_HOURS) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 9 DC-Power.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: W
+	     * <li>
+	     * </ul>
+	     */
+	    ST9_DC_POWER(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 9 DC-Voltage.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: V
+	     * <li>
+	     * </ul>
+	     */
+	    ST9_DC_VOLTAGE(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.VOLT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 10 DC-Current.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: A
+	     * <li>
+	     * </ul>
+	     */
+	    ST10_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.AMPERE) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 10 DC-Energy.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: WattHours
+	     * <li>
+	     * </ul>
+	     */
+	    ST10_DC_ENERGY(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT_HOURS) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 10 DC-Power.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: W
+	     * <li>
+	     * </ul>
+	     */
+	    ST10_DC_POWER(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 10 DC-Voltage.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: V
+	     * <li>
+	     * </ul>
+	     */
+	    ST10_DC_VOLTAGE(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.VOLT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 11 DC-Current.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: A
+	     * <li>
+	     * </ul>
+	     */
+	    ST11_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.AMPERE) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 11 DC-Energy.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: WattHours
+	     * <li>
+	     * </ul>
+	     */
+	    ST11_DC_ENERGY(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT_HOURS) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 11 DC-Power.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: W
+	     * <li>
+	     * </ul>
+	     */
+	    ST11_DC_POWER(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 11 DC-Voltage.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: V
+	     * <li>
+	     * </ul>
+	     */
+	    ST11_DC_VOLTAGE(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.VOLT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 12 DC-Current.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: A
+	     * <li>
+	     * </ul>
+	     */
+	    ST12_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.AMPERE) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 12 DC-Energy.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: WattHours
+	     * <li>
+	     * </ul>
+	     */
+	    ST12_DC_ENERGY(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT_HOURS) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 12 DC-Power.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: W
+	     * <li>
+	     * </ul>
+	     */
+	    ST12_DC_POWER(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.WATT) //
+	            .persistencePriority(PersistencePriority.HIGH)),
+
+	    /**
+	     * String 12 DC-Voltage.
+	     *
+	     * <ul>
+	     * <li>Interface: PvInverter
+	     * <li>Type: Integer
+	     * <li>Unit: V
+	     * <li>
+	     * </ul>
+	     */
+	    ST12_DC_VOLTAGE(Doc.of(OpenemsType.INTEGER) //
+	            .unit(Unit.VOLT) //
+	            .persistencePriority(PersistencePriority.HIGH));
 
 		private final Doc doc;
 
@@ -146,99 +879,5 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		}
 	}
 
-	public default IntegerReadChannel getSt1DcCurrentChannel() {
-		return this.channel(ChannelId.ST1_DC_CURRENT);
-	}
 
-	public default Value<Integer> getSt1DcCurrent() {
-		return this.getSt1DcCurrentChannel().value();
-	}
-
-	public default void _setSt1DcCurrent(int value) {
-		this.getSt1DcCurrentChannel().setNextValue(value);
-	}
-
-	public default IntegerReadChannel getSt2DcCurrentChannel() {
-		return this.channel(ChannelId.ST2_DC_CURRENT);
-	}
-
-	public default Value<Integer> getSt2DcCurrent() {
-		return this.getSt2DcCurrentChannel().value();
-	}
-
-	public default void _setSt2DcCurrent(int value) {
-		this.getSt2DcCurrentChannel().setNextValue(value);
-	}
-
-	public default IntegerReadChannel getSt1DcEnergyChannel() {
-		return this.channel(ChannelId.ST1_DC_ENERGY);
-	}
-
-	public default Value<Integer> getSt1DcEnergy() {
-		return this.getSt1DcEnergyChannel().value();
-	}
-
-	public default void _setSt1DcEnergy(int value) {
-		this.getSt1DcEnergyChannel().setNextValue(value);
-	}
-
-	public default IntegerReadChannel getSt2DcEnergyChannel() {
-		return this.channel(ChannelId.ST2_DC_ENERGY);
-	}
-
-	public default Value<Integer> getSt2DcEnergy() {
-		return this.getSt2DcEnergyChannel().value();
-	}
-
-	public default void _setSt2DcEnergy(int value) {
-		this.getSt2DcEnergyChannel().setNextValue(value);
-	}
-
-	public default IntegerReadChannel getSt1DcPowerChannel() {
-		return this.channel(ChannelId.ST1_DC_POWER);
-	}
-
-	public default Value<Integer> getSt1DcPower() {
-		return this.getSt1DcPowerChannel().value();
-	}
-
-	public default void _setSt1DcPower(int value) {
-		this.getSt1DcPowerChannel().setNextValue(value);
-	}
-
-	public default IntegerReadChannel getSt2DcPowerChannel() {
-		return this.channel(ChannelId.ST2_DC_POWER);
-	}
-
-	public default Value<Integer> getSt2DcPower() {
-		return this.getSt2DcPowerChannel().value();
-	}
-
-	public default void _setSt2DcPower(int value) {
-		this.getSt2DcPowerChannel().setNextValue(value);
-	}
-
-	public default IntegerReadChannel getSt1DcVoltageChannel() {
-		return this.channel(ChannelId.ST1_DC_VOLTAGE);
-	}
-
-	public default Value<Integer> getSt1DcVoltage() {
-		return this.getSt1DcVoltageChannel().value();
-	}
-
-	public default void _setSt1DcVoltage(int value) {
-		this.getSt1DcVoltageChannel().setNextValue(value);
-	}
-
-	public default IntegerReadChannel getSt2DcVoltageChannel() {
-		return this.channel(ChannelId.ST2_DC_VOLTAGE);
-	}
-
-	public default Value<Integer> getSt2DcVoltage() {
-		return this.getSt2DcVoltageChannel().value();
-	}
-
-	public default void _setSt2DcVoltage(int value) {
-		this.getSt2DcVoltageChannel().setNextValue(value);
-	}
 }

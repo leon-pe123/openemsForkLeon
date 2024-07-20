@@ -21,13 +21,19 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 import io.openems.common.channel.AccessMode;
 import io.openems.common.exceptions.OpenemsException;
-import io.openems.common.exceptions.InvalidValueException;
+
 import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
 import io.openems.edge.bridge.modbus.api.BridgeModbus;
 import io.openems.edge.bridge.modbus.api.ModbusComponent;
+import io.openems.edge.bridge.modbus.api.ModbusProtocol;
+import io.openems.edge.bridge.modbus.api.element.DummyRegisterElement;
+import io.openems.edge.bridge.modbus.api.element.SignedWordElement;
+import io.openems.edge.bridge.modbus.api.element.UnsignedDoublewordElement;
+import io.openems.edge.bridge.modbus.api.element.UnsignedWordElement;
+import io.openems.edge.bridge.modbus.api.task.FC3ReadRegistersTask;
 import io.openems.edge.bridge.modbus.sunspec.DefaultSunSpecModel;
 import io.openems.edge.bridge.modbus.sunspec.SunSpecModel;
-import io.openems.edge.common.channel.FloatReadChannel;
+import io.openems.edge.common.channel.IntegerReadChannel;
 import io.openems.edge.common.component.OpenemsComponent;
 import io.openems.edge.common.event.EdgeEventConstants;
 import io.openems.edge.common.modbusslave.ModbusSlave;
@@ -62,7 +68,7 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 			// .put(DefaultSunSpecModel.S_121, Priority.LOW) // from 40265
 			// .put(DefaultSunSpecModel.S_122, Priority.LOW) // from 40297
 			.put(DefaultSunSpecModel.S_123, Priority.LOW) // from 40343 before 2023, from 40070 since 2023
-			.put(DefaultSunSpecModel.S_160, Priority.LOW) //
+			//.put(DefaultSunSpecModel.S_160, Priority.LOW) // from 40621
 			// since 2023
 			.put(DefaultSunSpecModel.S_701, Priority.HIGH) // from 40096
 			.put(DefaultSunSpecModel.S_704, Priority.LOW) // from 40251
@@ -101,6 +107,11 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 	private ConfigurationAdmin cm;
 
 	private Config config;
+	private static final int BASE_ADDRESS = 40623; // Starting address for S160 Block / Number of Strings
+	private static final int MODULE_START_ADDRESS = BASE_ADDRESS + 17; // Starting address for modules
+	private static final int REGISTER_OFFSET = 20; // Number of registers per module
+	private boolean staticTasksAdded = false;	
+	private int numberOfModules = 0;	
 
 	@Override
 	@Reference(policy = ReferencePolicy.STATIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.MANDATORY)
@@ -127,6 +138,7 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 			return;
 		}
 		this.config = config;
+		this.addInitialModbusTask(this.getModbusProtocol());
 	}
 
 	@Override
@@ -144,7 +156,7 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 
 			try {
 
-				this.PVDataHandler();
+				this.pvDataHandler();
 			} catch (OpenemsNamedException e) {
 				log.warn("Cannot write S160 data yet");
 			}
@@ -153,78 +165,142 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 		}
 
 	}
+	
+	/**
+	 * Adds the initial Modbus task to read the number of modules and scale factors.
+	 *
+	 * @param protocol the {@link ModbusProtocol}
+	 * @throws OpenemsException on error
+	 */
+	private void addInitialModbusTask(ModbusProtocol protocol) throws OpenemsException {
+		protocol.addTask(//
+				new FC3ReadRegistersTask(BASE_ADDRESS, Priority.HIGH,
 
-	public void PVDataHandler() throws OpenemsNamedException {
+						m(PvInverterSmaSunnyTripower.ChannelId.DCA_SF, new SignedWordElement(BASE_ADDRESS)),
+						m(PvInverterSmaSunnyTripower.ChannelId.DCV_SF, new SignedWordElement(BASE_ADDRESS + 1)),
+						m(PvInverterSmaSunnyTripower.ChannelId.DCW_SF, new SignedWordElement(BASE_ADDRESS + 2)),
+						m(PvInverterSmaSunnyTripower.ChannelId.DCWH_SF, new SignedWordElement(BASE_ADDRESS + 3)),
+						new DummyRegisterElement(BASE_ADDRESS + 4, BASE_ADDRESS + 5),
+						m(PvInverterSmaSunnyTripower.ChannelId.N, new SignedWordElement(BASE_ADDRESS + 6))
+						
+				));
+	}
 
-		if (this.isSunSpecInitializationCompleted()) {
-			try {
-				FloatReadChannel st1DcPowerChannel = this.channel(DefaultSunSpecModel.S160.MODULE_1_DCW.getChannelId());
-				int st1DcPowerValue = st1DcPowerChannel.value().getOrError().intValue();
-				this._setSt1DcPower(st1DcPowerValue);
+	private void addStaticModbusTasks(ModbusProtocol protocol, int numberOfModules) throws OpenemsException {
+		for (int i = 0; i < numberOfModules; i++) {
+			int moduleBaseAddress = MODULE_START_ADDRESS + (i * REGISTER_OFFSET);
+			String currentChannelName = "ST" + (i + 1) + "_DC_CURRENT_INTERNAL";
+			String voltageChannelName = "ST" + (i + 1) + "_DC_VOLTAGE_INTERNAL";
+			String powerChannelName = "ST" + (i + 1) + "_DC_POWER_INTERNAL";
+			String energyChannelName = "ST" + (i + 1) + "_DC_ENERGY_INTERNAL";
 
-				FloatReadChannel st2DcPowerChannel = this.channel(DefaultSunSpecModel.S160.MODULE_2_DCW.getChannelId());
-				int st2DcPowerValue = st2DcPowerChannel.value().getOrError().intValue();
-				this._setSt2DcPower(st2DcPowerValue);
+			protocol.addTask(//
+					new FC3ReadRegistersTask(moduleBaseAddress, Priority.LOW,
+							m(PvInverterSmaSunnyTripower.ChannelId.valueOf(currentChannelName), //
+									new UnsignedWordElement(moduleBaseAddress)),
+							m(PvInverterSmaSunnyTripower.ChannelId.valueOf(voltageChannelName), //
+									new UnsignedWordElement(moduleBaseAddress + 1)),
+							m(PvInverterSmaSunnyTripower.ChannelId.valueOf(powerChannelName), //
+									new UnsignedWordElement(moduleBaseAddress + 2)),
+							m(PvInverterSmaSunnyTripower.ChannelId.valueOf(energyChannelName), //
+									new UnsignedDoublewordElement(moduleBaseAddress + 3))));
+		}
 
-				this.logDebug(this.log,
-						"Reading Power Values DC1 / DC2: " + st1DcPowerValue + " / " + st2DcPowerValue + " W");
-			} catch (InvalidValueException e) {
-				this.logDebug(this.log, "NO DATA for Power Values DC1 / DC2: " + e.getMessage());
+	}	
+	private void pvDataHandler() throws OpenemsNamedException {
+
+		if (!this.isSunSpecInitializationCompleted()) {
+			// Do nothing until SunSpec is initialized
+			return;
+		}
+		if (this.staticTasksAdded == false) {
+
+			try { // We need to know the number of modules
+				IntegerReadChannel numberOfModulesChannel = this.channel(PvInverterSmaSunnyTripower.ChannelId.N);
+				this.numberOfModules = numberOfModulesChannel.value().getOrError().intValue();
+			} catch (OpenemsException e) {
+				this.log.error("Number of modules unknown");
+				return;
+			}
+			if (this.numberOfModules > 0) {
+
+				try {
+					this.addStaticModbusTasks(this.getModbusProtocol(), this.numberOfModules);
+					this.staticTasksAdded = true;
+					return;
+				} catch (OpenemsException e) {
+					this.log.error("Error adding static Modbus tasks", e);
+				}
 			}
 
-			try {
-				FloatReadChannel st1DcEnergyChannel = this
-						.channel(DefaultSunSpecModel.S160.MODULE_1_DCWH.getChannelId());
-				int st1DcEnergyValue = st1DcEnergyChannel.value().getOrError().intValue();
-				this._setSt1DcEnergy(st1DcEnergyValue);
+		}
 
-				FloatReadChannel st2DcEnergyChannel = this
-						.channel(DefaultSunSpecModel.S160.MODULE_2_DCWH.getChannelId());
-				int st2DcEnergyValue = st2DcEnergyChannel.value().getOrError().intValue();
-				this._setSt2DcEnergy(st2DcEnergyValue);
+		// modbus Task is active and Sunspec is initialized
+		IntegerReadChannel currentScaleFactorChannel = this.channel(PvInverterSmaSunnyTripower.ChannelId.DCA_SF);
+		int currentScaleFactor = currentScaleFactorChannel.value().getOrError().intValue();
 
-				this.logDebug(this.log,
-						"Reading Energy Values DC1 / DC2: " + st1DcEnergyValue + " / " + st2DcEnergyValue + " Wh");
-			} catch (InvalidValueException e) {
-				this.logDebug(this.log, "NO DATA for Energy Values DC1 / DC2: " + e.getMessage());
+		IntegerReadChannel voltageScaleFactorChannel = this.channel(PvInverterSmaSunnyTripower.ChannelId.DCV_SF);
+		int voltageScaleFactor = voltageScaleFactorChannel.value().getOrError().intValue();
+
+		IntegerReadChannel powerScaleFactorChannel = this.channel(PvInverterSmaSunnyTripower.ChannelId.DCW_SF);
+		int powerScaleFactor = powerScaleFactorChannel.value().getOrError().intValue();
+
+		IntegerReadChannel energyScaleFactorChannel = this.channel(PvInverterSmaSunnyTripower.ChannelId.DCWH_SF);
+		int energyScaleFactor = energyScaleFactorChannel.value().getOrError().intValue();
+
+		for (int i = 0; i < this.numberOfModules; i++) {
+
+			// Internal values without scale factor
+			String currentChannelNameInternal = "ST" + (i + 1) + "_DC_CURRENT_INTERNAL";
+			String voltageChannelNameInternal = "ST" + (i + 1) + "_DC_VOLTAGE_INTERNAL";
+			String powerChannelNameInternal = "ST" + (i + 1) + "_DC_POWER_INTERNAL";
+			String energyChannelNameInternal = "ST" + (i + 1) + "_DC_ENERGY_INTERNAL";
+
+			IntegerReadChannel currentChannelInternal = this.getChannelByName(currentChannelNameInternal);
+			IntegerReadChannel voltageChannelInternal = this.getChannelByName(voltageChannelNameInternal);
+			IntegerReadChannel powerChannelInternal = this.getChannelByName(powerChannelNameInternal);
+			IntegerReadChannel energyChannelInternal = this.getChannelByName(energyChannelNameInternal);
+
+			// Target Channels
+			String currentChannelName = "ST" + (i + 1) + "_DC_CURRENT";
+			String voltageChannelName = "ST" + (i + 1) + "_DC_VOLTAGE";
+			String powerChannelName = "ST" + (i + 1) + "_DC_POWER";
+			String energyChannelName = "ST" + (i + 1) + "_DC_ENERGY";
+
+			this.updateChannelValues(currentChannelInternal, currentChannelName, currentScaleFactor);
+			this.updateChannelValues(voltageChannelInternal, voltageChannelName, voltageScaleFactor);
+			this.updateChannelValues(powerChannelInternal, powerChannelName, powerScaleFactor);
+			this.updateChannelValues(energyChannelInternal, energyChannelName, energyScaleFactor);
+		}
+
+	}
+
+	private IntegerReadChannel getChannelByName(String channelName) {
+		try {
+			return this.channel(PvInverterSmaSunnyTripower.ChannelId.valueOf(channelName));
+		} catch (IllegalArgumentException e) {
+			this.log.error("Channel with name [" + channelName + "] does not exist.", e);
+			return null;
+		}
+	}
+
+	/**
+	 * Updates the channel values based on the scale factor.
+	 *
+	 * @param internalChannel     the internal channel
+	 * @param externalChannelName the external channel name
+	 * @param scaleFactor         the scale factor
+	 * @throws OpenemsNamedException on error
+	 */
+	private void updateChannelValues(IntegerReadChannel internalChannel, String externalChannelName, int scaleFactor)
+			throws OpenemsNamedException {
+		if (internalChannel != null) {
+			int value = internalChannel.value().getOrError().intValue();
+			double scaledValue = value * Math.pow(10, scaleFactor);
+			IntegerReadChannel externalChannel = this.getChannelByName(externalChannelName);
+			if (externalChannel != null) {
+				externalChannel.setNextValue((int) scaledValue);
 			}
-
-			try {
-				FloatReadChannel st1DcCurrentChannel = this
-						.channel(DefaultSunSpecModel.S160.MODULE_1_DCA.getChannelId());
-				int st1DcCurrentValue = st1DcCurrentChannel.value().getOrError().intValue();
-				this._setSt1DcCurrent(st1DcCurrentValue);
-
-				FloatReadChannel st2DcCurrentChannel = this
-						.channel(DefaultSunSpecModel.S160.MODULE_2_DCA.getChannelId());
-				int st2DcCurrentValue = st2DcCurrentChannel.value().getOrError().intValue();
-				this._setSt2DcCurrent(st2DcCurrentValue);
-
-				this.logDebug(this.log,
-						"Reading Current Values DC1 / DC2: " + st1DcCurrentValue + " / " + st2DcCurrentValue + " A");
-			} catch (InvalidValueException e) {
-				this.logDebug(this.log, "NO DATA for Current Values DC1 / DC2: " + e.getMessage());
-			}
-
-			try {
-				FloatReadChannel st1DcVoltageChannel = this
-						.channel(DefaultSunSpecModel.S160.MODULE_1_DCV.getChannelId());
-				int st1DcVoltageValue = st1DcVoltageChannel.value().getOrError().intValue();
-				this._setSt1DcVoltage(st1DcVoltageValue);
-
-				FloatReadChannel st2DcVoltageChannel = this
-						.channel(DefaultSunSpecModel.S160.MODULE_2_DCV.getChannelId());
-				int st2DcVoltageValue = st2DcVoltageChannel.value().getOrError().intValue();
-				this._setSt2DcVoltage(st2DcVoltageValue);
-
-				this.logDebug(this.log,
-						"Reading Voltage Values DC1 / DC2: " + st1DcVoltageValue + " / " + st2DcVoltageValue + " V");
-			} catch (InvalidValueException e) {
-				this.logDebug(this.log, "NO DATA for Voltage Values DC1 / DC2: " + e.getMessage());
-			}
-
-		} else {
-			log.info("SunSpec model not completely initialized. Skipping PVDataHandler");
 		}
 	}
 
