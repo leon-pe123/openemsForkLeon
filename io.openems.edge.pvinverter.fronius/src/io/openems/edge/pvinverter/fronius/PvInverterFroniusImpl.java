@@ -80,11 +80,6 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 
 	private Config config;
 
-	private static final int BASE_ADDRESS = 40265; // Starting address for S160 Block / Number of Strings
-	private static final int MODULE_START_ADDRESS = 40282; // Starting address for modules
-	private static final int REGISTER_OFFSET = 20; // Number of registers per module
-	private boolean staticTasksAdded = false;
-
 	private int numberOfModules = 0;
 
 	@Reference(policy = ReferencePolicy.STATIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.MANDATORY)
@@ -106,13 +101,24 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 
 	@Activate
 	private void activate(ComponentContext context, Config config) throws OpenemsException {
+
+		this.config = config;
 		if (super.activate(context, config.id(), config.alias(), config.enabled(), config.readOnly(),
 				config.modbusUnitId(), this.cm, "Modbus", config.modbus_id(), READ_FROM_MODBUS_BLOCK, Phase.ALL)) {
 			return;
 		}
-		this.config = config;
-		this.addInitialModbusTask(this.getModbusProtocol());
+
+		// No need fetching number of modules if 0 is configured
+		if (this.config.modbusBaseAddress() > 0) {
+			this.addInitialModbusTask(this.getModbusProtocol());
+		}
+
 	}
+
+	private int BASE_ADDRESS;
+	private int MODULE_START_ADDRESS;
+	private static final int REGISTER_OFFSET = 20; // Number of registers per module
+	private boolean staticTasksAdded = false;
 
 	@Override
 	public void setActivePowerLimit(int value) throws OpenemsNamedException {
@@ -140,6 +146,9 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 	 * @throws OpenemsException on error
 	 */
 	private void addInitialModbusTask(ModbusProtocol protocol) throws OpenemsException {
+		this.BASE_ADDRESS = this.config.modbusBaseAddress() + 1; // Starting address for S160 Block. i.e. 40264 for
+																	// Fronius Symo.
+		this.MODULE_START_ADDRESS = BASE_ADDRESS + 17; // Starting address for modules
 		protocol.addTask(//
 				new FC3ReadRegistersTask(BASE_ADDRESS, Priority.HIGH,
 
@@ -177,6 +186,10 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 
 	private void pvDataHandler() throws OpenemsNamedException {
 
+		// No base address for S160 is configured
+		if (this.config.modbusBaseAddress() == 0) {
+			return;
+		}
 		if (!this.isSunSpecInitializationCompleted()) {
 			// Do nothing until SunSpec is initialized
 			return;
@@ -203,42 +216,49 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 
 		}
 
-		// modbus Task is active and Sunspec is initialized
-		IntegerReadChannel currentScaleFactorChannel = this.channel(PvInverterFronius.ChannelId.DCA_SF);
-		int currentScaleFactor = currentScaleFactorChannel.value().getOrError().intValue();
+		try {
+			// modbus Task is active and Sunspec is initialized
+			IntegerReadChannel currentScaleFactorChannel = this.channel(PvInverterFronius.ChannelId.DCA_SF);
+			int currentScaleFactor = currentScaleFactorChannel.value().getOrError().intValue();
 
-		IntegerReadChannel voltageScaleFactorChannel = this.channel(PvInverterFronius.ChannelId.DCV_SF);
-		int voltageScaleFactor = voltageScaleFactorChannel.value().getOrError().intValue();
+			IntegerReadChannel voltageScaleFactorChannel = this.channel(PvInverterFronius.ChannelId.DCV_SF);
+			int voltageScaleFactor = voltageScaleFactorChannel.value().getOrError().intValue();
 
-		IntegerReadChannel powerScaleFactorChannel = this.channel(PvInverterFronius.ChannelId.DCW_SF);
-		int powerScaleFactor = powerScaleFactorChannel.value().getOrError().intValue();
+			IntegerReadChannel powerScaleFactorChannel = this.channel(PvInverterFronius.ChannelId.DCW_SF);
+			int powerScaleFactor = powerScaleFactorChannel.value().getOrError().intValue();
 
-		IntegerReadChannel energyScaleFactorChannel = this.channel(PvInverterFronius.ChannelId.DCWH_SF);
-		int energyScaleFactor = energyScaleFactorChannel.value().getOrError().intValue();
+			IntegerReadChannel energyScaleFactorChannel = this.channel(PvInverterFronius.ChannelId.DCWH_SF);
+			int energyScaleFactor = energyScaleFactorChannel.value().getOrError().intValue();
 
-		for (int i = 0; i < this.numberOfModules; i++) {
+			for (int i = 0; i < this.numberOfModules; i++) {
 
-			// Internal values without scale factor
-			String currentChannelNameInternal = "ST" + (i + 1) + "_DC_CURRENT_INTERNAL";
-			String voltageChannelNameInternal = "ST" + (i + 1) + "_DC_VOLTAGE_INTERNAL";
-			String powerChannelNameInternal = "ST" + (i + 1) + "_DC_POWER_INTERNAL";
-			String energyChannelNameInternal = "ST" + (i + 1) + "_DC_ENERGY_INTERNAL";
+				// Internal values without scale factor
+				String currentChannelNameInternal = "ST" + (i + 1) + "_DC_CURRENT_INTERNAL";
+				String voltageChannelNameInternal = "ST" + (i + 1) + "_DC_VOLTAGE_INTERNAL";
+				String powerChannelNameInternal = "ST" + (i + 1) + "_DC_POWER_INTERNAL";
+				String energyChannelNameInternal = "ST" + (i + 1) + "_DC_ENERGY_INTERNAL";
 
-			IntegerReadChannel currentChannelInternal = this.getChannelByName(currentChannelNameInternal);
-			IntegerReadChannel voltageChannelInternal = this.getChannelByName(voltageChannelNameInternal);
-			IntegerReadChannel powerChannelInternal = this.getChannelByName(powerChannelNameInternal);
-			IntegerReadChannel energyChannelInternal = this.getChannelByName(energyChannelNameInternal);
+				IntegerReadChannel currentChannelInternal = this.getChannelByName(currentChannelNameInternal);
+				IntegerReadChannel voltageChannelInternal = this.getChannelByName(voltageChannelNameInternal);
+				IntegerReadChannel powerChannelInternal = this.getChannelByName(powerChannelNameInternal);
+				IntegerReadChannel energyChannelInternal = this.getChannelByName(energyChannelNameInternal);
 
-			// Target Channels
-			String currentChannelName = "ST" + (i + 1) + "_DC_CURRENT";
-			String voltageChannelName = "ST" + (i + 1) + "_DC_VOLTAGE";
-			String powerChannelName = "ST" + (i + 1) + "_DC_POWER";
-			String energyChannelName = "ST" + (i + 1) + "_DC_ENERGY";
+				// Target Channels
+				String currentChannelName = "ST" + (i + 1) + "_DC_CURRENT";
+				String voltageChannelName = "ST" + (i + 1) + "_DC_VOLTAGE";
+				String powerChannelName = "ST" + (i + 1) + "_DC_POWER";
+				String energyChannelName = "ST" + (i + 1) + "_DC_ENERGY";
 
-			this.updateChannelValues(currentChannelInternal, currentChannelName, currentScaleFactor);
-			this.updateChannelValues(voltageChannelInternal, voltageChannelName, voltageScaleFactor);
-			this.updateChannelValues(powerChannelInternal, powerChannelName, powerScaleFactor);
-			this.updateChannelValues(energyChannelInternal, energyChannelName, energyScaleFactor);
+				this.updateChannelValues(currentChannelInternal, currentChannelName, currentScaleFactor);
+				this.updateChannelValues(voltageChannelInternal, voltageChannelName, voltageScaleFactor);
+				this.updateChannelValues(powerChannelInternal, powerChannelName, powerScaleFactor);
+				this.updateChannelValues(energyChannelInternal, energyChannelName, energyScaleFactor);
+
+			}
+
+		} catch (OpenemsException e) {
+			this.log.error("Number of modules unknown");
+			return;
 		}
 
 	}
@@ -263,12 +283,31 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 	private void updateChannelValues(IntegerReadChannel internalChannel, String externalChannelName, int scaleFactor)
 			throws OpenemsNamedException {
 		if (internalChannel != null) {
-			int value = internalChannel.value().getOrError().intValue();
-			double scaledValue = value * Math.pow(10, scaleFactor);
-			IntegerReadChannel externalChannel = this.getChannelByName(externalChannelName);
-			if (externalChannel != null) {
-				externalChannel.setNextValue((int) scaledValue);
+			try {
+				Integer value = internalChannel.value().getOrError().intValue();
+				
+				if (value == 65535) { // return if "fill-values" are used
+					logError(log, "Error Channel: " + externalChannelName + " is 65535 (SF:" + scaleFactor + "). No values saved.");
+					return;
+				}
+
+				if (value != null) { // Sometimes wrong values while no pv production
+					double scaledValue = value * Math.pow(10, scaleFactor);
+					int targetValue = (int) scaledValue;
+					IntegerReadChannel externalChannel = this.getChannelByName(externalChannelName);
+					if (externalChannel != null) {
+						externalChannel.setNextValue(targetValue);
+						logDebug(log,
+								"Channel: " + externalChannelName + ":  " + targetValue + " (SF:" + scaleFactor + ")");
+					} else {
+						logError(log, "Error Channel: " + externalChannelName + " is NULL (SF:" + scaleFactor + ")");
+					}
+
+				}
+			} catch (OpenemsException e) {
+				logError(log, "Error Channel: " + externalChannelName + " (SF:" + scaleFactor + ")");
 			}
+
 		}
 	}
 

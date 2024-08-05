@@ -12,6 +12,7 @@ public class MyConfig extends AbstractComponentConfig implements Config {
 		private boolean debugMode;
 		private String modbusId = null;
 		private int modbusUnitId;
+		private int modbusBaseAddress;
 
 		private Builder() {
 		}
@@ -36,6 +37,11 @@ public class MyConfig extends AbstractComponentConfig implements Config {
 			return this;
 		}
 
+		public Builder modbusBaseAddress(int modbusBaseAddress) {
+			this.modbusBaseAddress = modbusBaseAddress;
+			return this;
+		}		
+		
 		public Builder setModbusUnitId(int modbusUnitId) {
 			this.modbusUnitId = modbusUnitId;
 			return this;
@@ -75,6 +81,11 @@ public class MyConfig extends AbstractComponentConfig implements Config {
 	public String modbus_id() {
 		return this.builder.modbusId;
 	}
+	
+	@Override
+	public int modbusBaseAddress() {
+		return this.builder.modbusBaseAddress;
+	}	
 
 	@Override
 	public String Modbus_target() {
