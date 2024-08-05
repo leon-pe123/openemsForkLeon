@@ -120,6 +120,13 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 	private static final int REGISTER_OFFSET = 20; // Number of registers per module
 	private boolean staticTasksAdded = false;
 
+	/**
+	 * Overrides because Fronius needs value of S123_WMaxLim_Ena to be set every
+	 * time a new value is given.
+	 *
+	 * @param int value - the new limit value
+	 * @throws OpenemsException on error
+	 */
 	@Override
 	public void setActivePowerLimit(int value) throws OpenemsNamedException {
 
@@ -285,9 +292,10 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 		if (internalChannel != null) {
 			try {
 				Integer value = internalChannel.value().getOrError().intValue();
-				
+
 				if (value == 65535) { // return if "fill-values" are used
-					logError(log, "Error Channel: " + externalChannelName + " is 65535 (SF:" + scaleFactor + "). No values saved.");
+					logError(log, "Error Channel: " + externalChannelName + " is 65535 (SF:" + scaleFactor
+							+ "). No values saved.");
 					return;
 				}
 

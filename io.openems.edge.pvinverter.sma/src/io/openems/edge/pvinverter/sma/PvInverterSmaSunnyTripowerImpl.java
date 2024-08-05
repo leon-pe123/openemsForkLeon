@@ -105,12 +105,13 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 
 	@Reference
 	private ConfigurationAdmin cm;
+	
+	/**
+	 * Start address S160 for STP 110-60 (Core2)  -> 41304
+	 * Start address S160 for STP10-3AV -> 40621
+	 * */
 
 	private Config config;
-	private static final int BASE_ADDRESS = 40623; // Starting address for S160 Block / Number of Strings
-	private static final int MODULE_START_ADDRESS = BASE_ADDRESS + 17; // Starting address for modules
-	private static final int REGISTER_OFFSET = 20; // Number of registers per module
-	private boolean staticTasksAdded = false;	
 	private int numberOfModules = 0;	
 
 	@Override
@@ -138,9 +139,18 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 			return;
 		}
 		this.config = config;
-		this.addInitialModbusTask(this.getModbusProtocol());
+		// No need fetching number of modules if 0 is configured
+		if (this.config.modbusBaseAddress() > 0) {
+			this.addInitialModbusTask(this.getModbusProtocol());
+		}
 	}
 
+	private int BASE_ADDRESS;
+	private int MODULE_START_ADDRESS;
+	private static final int REGISTER_OFFSET = 20; // Number of registers per module
+	private boolean staticTasksAdded = false;
+	
+	
 	@Override
 	@Deactivate
 	protected void deactivate() {
@@ -209,6 +219,10 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 	}	
 	private void pvDataHandler() throws OpenemsNamedException {
 
+		// No base address for S160 is configured
+		if (this.config.modbusBaseAddress() == 0) {
+			return;
+		}
 		if (!this.isSunSpecInitializationCompleted()) {
 			// Do nothing until SunSpec is initialized
 			return;
@@ -235,45 +249,53 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 
 		}
 
-		// modbus Task is active and Sunspec is initialized
-		IntegerReadChannel currentScaleFactorChannel = this.channel(PvInverterSmaSunnyTripower.ChannelId.DCA_SF);
-		int currentScaleFactor = currentScaleFactorChannel.value().getOrError().intValue();
+		try {
+			// modbus Task is active and Sunspec is initialized
+			IntegerReadChannel currentScaleFactorChannel = this.channel(PvInverterSmaSunnyTripower.ChannelId.DCA_SF);
+			int currentScaleFactor = currentScaleFactorChannel.value().getOrError().intValue();
 
-		IntegerReadChannel voltageScaleFactorChannel = this.channel(PvInverterSmaSunnyTripower.ChannelId.DCV_SF);
-		int voltageScaleFactor = voltageScaleFactorChannel.value().getOrError().intValue();
+			IntegerReadChannel voltageScaleFactorChannel = this.channel(PvInverterSmaSunnyTripower.ChannelId.DCV_SF);
+			int voltageScaleFactor = voltageScaleFactorChannel.value().getOrError().intValue();
 
-		IntegerReadChannel powerScaleFactorChannel = this.channel(PvInverterSmaSunnyTripower.ChannelId.DCW_SF);
-		int powerScaleFactor = powerScaleFactorChannel.value().getOrError().intValue();
+			IntegerReadChannel powerScaleFactorChannel = this.channel(PvInverterSmaSunnyTripower.ChannelId.DCW_SF);
+			int powerScaleFactor = powerScaleFactorChannel.value().getOrError().intValue();
 
-		IntegerReadChannel energyScaleFactorChannel = this.channel(PvInverterSmaSunnyTripower.ChannelId.DCWH_SF);
-		int energyScaleFactor = energyScaleFactorChannel.value().getOrError().intValue();
+			IntegerReadChannel energyScaleFactorChannel = this.channel(PvInverterSmaSunnyTripower.ChannelId.DCWH_SF);
+			int energyScaleFactor = energyScaleFactorChannel.value().getOrError().intValue();
 
-		for (int i = 0; i < this.numberOfModules; i++) {
+			for (int i = 0; i < this.numberOfModules; i++) {
 
-			// Internal values without scale factor
-			String currentChannelNameInternal = "ST" + (i + 1) + "_DC_CURRENT_INTERNAL";
-			String voltageChannelNameInternal = "ST" + (i + 1) + "_DC_VOLTAGE_INTERNAL";
-			String powerChannelNameInternal = "ST" + (i + 1) + "_DC_POWER_INTERNAL";
-			String energyChannelNameInternal = "ST" + (i + 1) + "_DC_ENERGY_INTERNAL";
+				// Internal values without scale factor
+				String currentChannelNameInternal = "ST" + (i + 1) + "_DC_CURRENT_INTERNAL";
+				String voltageChannelNameInternal = "ST" + (i + 1) + "_DC_VOLTAGE_INTERNAL";
+				String powerChannelNameInternal = "ST" + (i + 1) + "_DC_POWER_INTERNAL";
+				String energyChannelNameInternal = "ST" + (i + 1) + "_DC_ENERGY_INTERNAL";
 
-			IntegerReadChannel currentChannelInternal = this.getChannelByName(currentChannelNameInternal);
-			IntegerReadChannel voltageChannelInternal = this.getChannelByName(voltageChannelNameInternal);
-			IntegerReadChannel powerChannelInternal = this.getChannelByName(powerChannelNameInternal);
-			IntegerReadChannel energyChannelInternal = this.getChannelByName(energyChannelNameInternal);
+				IntegerReadChannel currentChannelInternal = this.getChannelByName(currentChannelNameInternal);
+				IntegerReadChannel voltageChannelInternal = this.getChannelByName(voltageChannelNameInternal);
+				IntegerReadChannel powerChannelInternal = this.getChannelByName(powerChannelNameInternal);
+				IntegerReadChannel energyChannelInternal = this.getChannelByName(energyChannelNameInternal);
 
-			// Target Channels
-			String currentChannelName = "ST" + (i + 1) + "_DC_CURRENT";
-			String voltageChannelName = "ST" + (i + 1) + "_DC_VOLTAGE";
-			String powerChannelName = "ST" + (i + 1) + "_DC_POWER";
-			String energyChannelName = "ST" + (i + 1) + "_DC_ENERGY";
+				// Target Channels
+				String currentChannelName = "ST" + (i + 1) + "_DC_CURRENT";
+				String voltageChannelName = "ST" + (i + 1) + "_DC_VOLTAGE";
+				String powerChannelName = "ST" + (i + 1) + "_DC_POWER";
+				String energyChannelName = "ST" + (i + 1) + "_DC_ENERGY";
 
-			this.updateChannelValues(currentChannelInternal, currentChannelName, currentScaleFactor);
-			this.updateChannelValues(voltageChannelInternal, voltageChannelName, voltageScaleFactor);
-			this.updateChannelValues(powerChannelInternal, powerChannelName, powerScaleFactor);
-			this.updateChannelValues(energyChannelInternal, energyChannelName, energyScaleFactor);
+				this.updateChannelValues(currentChannelInternal, currentChannelName, currentScaleFactor);
+				this.updateChannelValues(voltageChannelInternal, voltageChannelName, voltageScaleFactor);
+				this.updateChannelValues(powerChannelInternal, powerChannelName, powerScaleFactor);
+				this.updateChannelValues(energyChannelInternal, energyChannelName, energyScaleFactor);
+
+			}
+
+		} catch (OpenemsException e) {
+			this.log.error("Number of modules unknown");
+			return;
 		}
 
 	}
+
 
 	private IntegerReadChannel getChannelByName(String channelName) {
 		try {
@@ -295,12 +317,31 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 	private void updateChannelValues(IntegerReadChannel internalChannel, String externalChannelName, int scaleFactor)
 			throws OpenemsNamedException {
 		if (internalChannel != null) {
-			int value = internalChannel.value().getOrError().intValue();
-			double scaledValue = value * Math.pow(10, scaleFactor);
-			IntegerReadChannel externalChannel = this.getChannelByName(externalChannelName);
-			if (externalChannel != null) {
-				externalChannel.setNextValue((int) scaledValue);
+			try {
+				Integer value = internalChannel.value().getOrError().intValue();
+				
+				if (value == 65535) { // return if "fill-values" are used
+					logError(log, "Error Channel: " + externalChannelName + " is 65535 (SF:" + scaleFactor + "). No values saved.");
+					return;
+				}
+
+				if (value != null) { // Sometimes wrong values while no pv production
+					double scaledValue = value * Math.pow(10, scaleFactor);
+					int targetValue = (int) scaledValue;
+					IntegerReadChannel externalChannel = this.getChannelByName(externalChannelName);
+					if (externalChannel != null) {
+						externalChannel.setNextValue(targetValue);
+						logDebug(log,
+								"Channel: " + externalChannelName + ":  " + targetValue + " (SF:" + scaleFactor + ")");
+					} else {
+						logError(log, "Error Channel: " + externalChannelName + " is NULL (SF:" + scaleFactor + ")");
+					}
+
+				}
+			} catch (OpenemsException e) {
+				logError(log, "Error Channel: " + externalChannelName + " (SF:" + scaleFactor + ")");
 			}
+
 		}
 	}
 
