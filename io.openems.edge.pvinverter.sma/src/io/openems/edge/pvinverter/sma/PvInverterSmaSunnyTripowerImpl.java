@@ -68,7 +68,7 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 			// .put(DefaultSunSpecModel.S_121, Priority.LOW) // from 40265
 			// .put(DefaultSunSpecModel.S_122, Priority.LOW) // from 40297
 			.put(DefaultSunSpecModel.S_123, Priority.LOW) // from 40343 before 2023, from 40070 since 2023
-			//.put(DefaultSunSpecModel.S_160, Priority.LOW) // from 40621
+			// .put(DefaultSunSpecModel.S_160, Priority.LOW) // from 40621
 			// since 2023
 			.put(DefaultSunSpecModel.S_701, Priority.HIGH) // from 40096
 			.put(DefaultSunSpecModel.S_704, Priority.LOW) // from 40251
@@ -105,14 +105,14 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 
 	@Reference
 	private ConfigurationAdmin cm;
-	
+
 	/**
-	 * Start address S160 for STP 110-60 (Core2)  -> 41304
-	 * Start address S160 for STP10-3AV -> 40621
-	 * */
+	 * Start address S160 for STP 110-60 (Core2) -> 41304 Start address S160 for
+	 * STP10-3AV -> 40621
+	 */
 
 	private Config config;
-	private int numberOfModules = 0;	
+	private int numberOfModules = 0;
 
 	@Override
 	@Reference(policy = ReferencePolicy.STATIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.MANDATORY)
@@ -149,8 +149,7 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 	private int MODULE_START_ADDRESS;
 	private static final int REGISTER_OFFSET = 20; // Number of registers per module
 	private boolean staticTasksAdded = false;
-	
-	
+
 	@Override
 	@Deactivate
 	protected void deactivate() {
@@ -175,7 +174,7 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 		}
 
 	}
-	
+
 	/**
 	 * Adds the initial Modbus task to read the number of modules and scale factors.
 	 *
@@ -183,6 +182,8 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 	 * @throws OpenemsException on error
 	 */
 	private void addInitialModbusTask(ModbusProtocol protocol) throws OpenemsException {
+		this.BASE_ADDRESS = this.config.modbusBaseAddress() + 2; // Starting address for S160 Block. Should have value 160
+		this.MODULE_START_ADDRESS = BASE_ADDRESS + 17; // Starting address for modules
 		protocol.addTask(//
 				new FC3ReadRegistersTask(BASE_ADDRESS, Priority.HIGH,
 
@@ -192,7 +193,7 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 						m(PvInverterSmaSunnyTripower.ChannelId.DCWH_SF, new SignedWordElement(BASE_ADDRESS + 3)),
 						new DummyRegisterElement(BASE_ADDRESS + 4, BASE_ADDRESS + 5),
 						m(PvInverterSmaSunnyTripower.ChannelId.N, new SignedWordElement(BASE_ADDRESS + 6))
-						
+
 				));
 	}
 
@@ -216,7 +217,8 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 									new UnsignedDoublewordElement(moduleBaseAddress + 3))));
 		}
 
-	}	
+	}
+
 	private void pvDataHandler() throws OpenemsNamedException {
 
 		// No base address for S160 is configured
@@ -296,7 +298,6 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 
 	}
 
-
 	private IntegerReadChannel getChannelByName(String channelName) {
 		try {
 			return this.channel(PvInverterSmaSunnyTripower.ChannelId.valueOf(channelName));
@@ -319,9 +320,10 @@ public class PvInverterSmaSunnyTripowerImpl extends AbstractSunSpecPvInverter
 		if (internalChannel != null) {
 			try {
 				Integer value = internalChannel.value().getOrError().intValue();
-				
+
 				if (value == 65535) { // return if "fill-values" are used
-					logError(log, "Error Channel: " + externalChannelName + " is 65535 (SF:" + scaleFactor + "). No values saved.");
+					logError(log, "Error Channel: " + externalChannelName + " is 65535 (SF:" + scaleFactor
+							+ "). No values saved.");
 					return;
 				}
 
