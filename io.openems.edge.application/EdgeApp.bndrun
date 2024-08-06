@@ -112,7 +112,6 @@
 	bnd.identity;id='io.openems.edge.ess.core',\
 	bnd.identity;id='io.openems.edge.ess.fenecon.commercial40',\
 	bnd.identity;id='io.openems.edge.ess.generic',\
-	bnd.identity;id='io.openems.edge.ess.mr.gridcon',\
 	bnd.identity;id='io.openems.edge.ess.samsung',\
 	bnd.identity;id='io.openems.edge.ess.sma',\
 	bnd.identity;id='io.openems.edge.evcs.alpitronic.hypercharger',\
@@ -195,13 +194,40 @@
 	bnd.identity;id='io.openems.edge.controller.pvinverter.reversepowerrelay',\
 	bnd.identity;id='io.openems.edge.io.opendtu.inverter',\
 	bnd.identity;id='io.openems.edge.io.siemenslogo',\
-	bnd.identity;id='io.openems.edge.meter.emh'
+	bnd.identity;id='io.openems.edge.meter.emh',\
+	osgi.identity;filter:='(&(osgi.identity=com.github.luben.zstd-jni)(version>=1.5.6))',\
+	osgi.identity;filter:='(&(osgi.identity=com.github.luben.zstd-jni)(version>=1.4.4))',\
+	osgi.identity;filter:='(&(osgi.identity=com.github.luben.zstd-jni)(version>=1.4.0))',\
+	osgi.identity;filter:='(&(osgi.identity=com.github.luben.zstd-jni)(version>=1.3.8))',\
+	osgi.identity;filter:='(&(osgi.identity=com.github.luben.zstd-jni)(version>=1.3.3))',\
+	osgi.identity;filter:='(&(osgi.identity=jakarta.servlet-api)(version>=6.0.0))',\
+	osgi.identity;filter:='(&(osgi.identity=org.apache.commons.codec)(version>=1.11.0))',\
+	osgi.identity;filter:='(&(osgi.identity=org.apache.commons.codec)(version>=1.10.0))',\
+	osgi.identity;filter:='(&(osgi.identity=org.apache.commons.codec)(version>=1.5.0))',\
+	osgi.identity;filter:='(&(osgi.identity=org.apache.commons.commons-codec)(version>=1.17.0))',\
+	osgi.identity;filter:='(&(osgi.identity=org.apache.commons.commons-io)(version>=2.16.1))',\
+	osgi.identity;filter:='(&(osgi.identity=org.apache.commons.commons-io)(version>=2.11.0))',\
+	osgi.identity;filter:='(&(osgi.identity=org.apache.commons.lang3)(version>=3.14.0))',\
+	osgi.identity;filter:='(&(osgi.identity=org.brotli.dec)(version>=0.1.2))',\
+	osgi.identity;filter:='(&(osgi.identity=org.conscrypt)(version>=2.5.1))',\
+	osgi.identity;filter:='(&(osgi.identity=org.eclipse.jetty.jmx)(version>=9.4.28))',\
+	osgi.identity;filter:='(&(osgi.identity=org.eclipse.jetty.servlet-api)(version>=5.0.2))',\
+	osgi.identity;filter:='(&(osgi.identity=org.eclipse.jetty.websocket.jakarta.server)(version>=11.0.22))',\
+	osgi.identity;filter:='(&(osgi.identity=org.eclipse.jetty.websocket.server)(version>=11.0.22))',\
+	osgi.identity;filter:='(&(osgi.identity=org.mongodb.mongo-java-driver)(version>=3.12.14))',\
+	osgi.identity;filter:='(&(osgi.identity=org.mongodb.mongo-java-driver)(version>=3.12.3))',\
+	osgi.identity;filter:='(&(osgi.identity=org.objectweb.asm)(version>=9.7.0))',\
+	osgi.identity;filter:='(&(osgi.identity=org.objectweb.asm)(version>=5.0.3))',\
+	osgi.identity;filter:='(&(osgi.identity=org.osgi.compendium)(version>=4.1.0))',\
+	osgi.identity;filter:='(&(osgi.identity=org.osgi.service.coordinator)(version>=1.0.2))',\
+	osgi.identity;filter:='(&(osgi.identity=org.tukaani.xz)(version>=1.9.0))',\
+	osgi.identity;filter:='(&(osgi.identity=org.tukaani.xz)(version>=1.8.0))',\
+	osgi.identity;filter:='(&(osgi.identity=osgi.cmpn)(version>=7.0.0))'
 -runbundles: \
 	Java-WebSocket;version='[1.5.4,1.5.5)',\
 	bcpkix;version='[1.70.0,1.70.1)',\
 	bcprov;version='[1.70.0,1.70.1)',\
 	bcutil;version='[1.70.0,1.70.1)',\
-	com.fasterxml.aalto-xml;version='[1.3.2,1.3.3)',\
 	com.fazecast.jSerialComm;version='[2.10.4,2.10.5)',\
 	com.ghgande.j2mod;version='[3.2.1,3.2.2)',\
 	com.google.gson;version='[2.11.0,2.11.1)',\
@@ -290,7 +316,6 @@
 	io.openems.edge.ess.core;version=snapshot,\
 	io.openems.edge.ess.fenecon.commercial40;version=snapshot,\
 	io.openems.edge.ess.generic;version=snapshot,\
-	io.openems.edge.ess.mr.gridcon;version=snapshot,\
 	io.openems.edge.ess.samsung;version=snapshot,\
 	io.openems.edge.ess.sma;version=snapshot,\
 	io.openems.edge.evcs.alpitronic.hypercharger;version=snapshot,\
@@ -400,9 +425,7 @@
 	io.reactivex.rxjava3.rxjava;version='[3.1.8,3.1.9)',\
 	javax.jmdns;version='[3.4.1,3.4.2)',\
 	javax.xml.soap-api;version='[1.4.0,1.4.1)',\
-	org.apache.commons.commons-compress;version='[1.26.1,1.26.2)',\
 	org.apache.commons.commons-csv;version='[1.10.0,1.10.1)',\
-	org.apache.commons.commons-io;version='[2.15.1,2.15.2)',\
 	org.apache.commons.math3;version='[3.6.1,3.6.2)',\
 	org.apache.felix.configadmin;version='[1.9.26,1.9.27)',\
 	org.apache.felix.eventadmin;version='[1.6.4,1.6.5)',\
@@ -432,10 +455,12 @@
 	org.owasp.encoder;version='[1.2.3,1.2.4)',\
 	reactive-streams;version='[1.0.4,1.0.5)',\
 	rrd4j;version='[3.9.0,3.9.1)',\
-	stax2-api;version='[4.2.0,4.2.1)',\
 	io.openems.edge.batteryinverter.victron;version=snapshot,\
 	io.openems.edge.controller.pvinverter.reversepowerrelay;version=snapshot,\
 	io.openems.edge.io.opendtu.inverter;version=snapshot,\
 	io.openems.edge.io.siemenslogo;version=snapshot,\
 	io.openems.edge.meter.emh;version=snapshot,\
-	io.openems.edge.solaredge;version=snapshot
+	io.openems.edge.solaredge;version=snapshot,\
+	com.fasterxml.aalto-xml;version='[1.3.3,1.3.4)',\
+	org.apache.commons.commons-compress;version='[1.26.2,1.26.3)',\
+	stax2-api;version='[4.2.2,4.2.3)'
