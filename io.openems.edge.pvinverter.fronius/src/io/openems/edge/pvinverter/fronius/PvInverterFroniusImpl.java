@@ -164,7 +164,7 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter
 	 * @throws OpenemsException on error
 	 */
 	private void addInitialModbusTask(ModbusProtocol protocol) throws OpenemsException {
-		this.BASE_ADDRESS = this.config.modbusBaseAddress() + 1; // Starting address for S160 Block. i.e. 40264 for
+		this.BASE_ADDRESS = this.config.modbusBaseAddress() + 2; // Starting address for S160 Block. i.e. 40264 for
 																	// Fronius Symo.
 		this.MODULE_START_ADDRESS = BASE_ADDRESS + 17; // Starting address for modules
 		protocol.addTask(//

@@ -95,7 +95,7 @@ public interface PvInverterFronius extends SunSpecPvInverter, ManagedSymmetricPv
 		 */
 		ST1_DC_CURRENT_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.AMPERE) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 
 		/**
 		 * String 2 DC-Current.
@@ -109,37 +109,37 @@ public interface PvInverterFronius extends SunSpecPvInverter, ManagedSymmetricPv
 		 */
 		ST2_DC_CURRENT_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.AMPERE) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST3_DC_CURRENT_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.AMPERE) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST4_DC_CURRENT_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.AMPERE) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST5_DC_CURRENT_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.AMPERE) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST6_DC_CURRENT_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.AMPERE) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST7_DC_CURRENT_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.AMPERE) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST8_DC_CURRENT_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.AMPERE) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST9_DC_CURRENT_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.AMPERE) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST10_DC_CURRENT_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.AMPERE) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST11_DC_CURRENT_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.AMPERE) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST12_DC_CURRENT_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.AMPERE) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 
 		/**
 		 * String 1 DC-Energy.
@@ -153,7 +153,7 @@ public interface PvInverterFronius extends SunSpecPvInverter, ManagedSymmetricPv
 		 */
 		ST1_DC_ENERGY_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT_HOURS) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 
 		/**
 		 * String 2 DC-Energy.
@@ -167,37 +167,38 @@ public interface PvInverterFronius extends SunSpecPvInverter, ManagedSymmetricPv
 		 */
 		ST2_DC_ENERGY_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT_HOURS) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST3_DC_ENERGY_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT_HOURS) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST4_DC_ENERGY_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT_HOURS) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST5_DC_ENERGY_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT_HOURS) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST6_DC_ENERGY_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT_HOURS) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST7_DC_ENERGY_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT_HOURS) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST8_DC_ENERGY_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT_HOURS) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST9_DC_ENERGY_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT_HOURS) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST10_DC_ENERGY_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT_HOURS) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST11_DC_ENERGY_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT_HOURS) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST12_DC_ENERGY_INTERNAL(Doc.of(OpenemsType.INTEGER) //
-				.unit(Unit.WATT_HOURS) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.unit(Unit.WATT_HOURS)
+				.persistencePriority(PersistencePriority.LOW)),
+		
 
 		/**
 		 * String 1 DC-Power.
@@ -211,7 +212,7 @@ public interface PvInverterFronius extends SunSpecPvInverter, ManagedSymmetricPv
 		 */
 		ST1_DC_POWER_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 
 		/**
 		 * String 2 DC-Power.
@@ -225,37 +226,37 @@ public interface PvInverterFronius extends SunSpecPvInverter, ManagedSymmetricPv
 		 */
 		ST2_DC_POWER_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST3_DC_POWER_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST4_DC_POWER_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST5_DC_POWER_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST6_DC_POWER_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST7_DC_POWER_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST8_DC_POWER_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST9_DC_POWER_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST10_DC_POWER_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST11_DC_POWER_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST12_DC_POWER_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.WATT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 
 		/**
 		 * String 1 DC-Voltage.
@@ -269,7 +270,7 @@ public interface PvInverterFronius extends SunSpecPvInverter, ManagedSymmetricPv
 		 */
 		ST1_DC_VOLTAGE_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.VOLT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 
 		/**
 		 * String 2 DC-Voltage.
@@ -283,37 +284,37 @@ public interface PvInverterFronius extends SunSpecPvInverter, ManagedSymmetricPv
 		 */
 		ST2_DC_VOLTAGE_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.VOLT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST3_DC_VOLTAGE_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.VOLT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST4_DC_VOLTAGE_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.VOLT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST5_DC_VOLTAGE_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.VOLT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST6_DC_VOLTAGE_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.VOLT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST7_DC_VOLTAGE_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.VOLT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST8_DC_VOLTAGE_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.VOLT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST9_DC_VOLTAGE_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.VOLT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST10_DC_VOLTAGE_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.VOLT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST11_DC_VOLTAGE_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.VOLT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 		ST12_DC_VOLTAGE_INTERNAL(Doc.of(OpenemsType.INTEGER) //
 				.unit(Unit.VOLT) //
-				.persistencePriority(PersistencePriority.HIGH)),
+				.persistencePriority(PersistencePriority.LOW)),
 
 		/**
 		 * String 1 DC-Current.
