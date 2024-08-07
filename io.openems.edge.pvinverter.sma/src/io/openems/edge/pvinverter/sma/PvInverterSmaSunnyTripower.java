@@ -316,7 +316,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * </ul>
 		 */
 		ST1_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
-				.unit(Unit.AMPERE) //
+				.unit(Unit.MILLIAMPERE) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**
@@ -372,7 +372,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * </ul>
 		 */
 		ST2_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
-				.unit(Unit.AMPERE) //
+				.unit(Unit.MILLIAMPERE) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**
@@ -428,7 +428,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * </ul>
 		 */
 		ST3_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
-				.unit(Unit.AMPERE) //
+				.unit(Unit.MILLIAMPERE) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**
@@ -484,7 +484,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * </ul>
 		 */
 		ST4_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
-				.unit(Unit.AMPERE) //
+				.unit(Unit.MILLIAMPERE) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**
@@ -540,7 +540,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * </ul>
 		 */
 		ST5_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
-				.unit(Unit.AMPERE) //
+				.unit(Unit.MILLIAMPERE) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**
@@ -596,7 +596,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * </ul>
 		 */
 		ST6_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
-				.unit(Unit.AMPERE) //
+				.unit(Unit.MILLIAMPERE) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**
@@ -652,7 +652,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * </ul>
 		 */
 		ST7_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
-				.unit(Unit.AMPERE) //
+				.unit(Unit.MILLIAMPERE) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**
@@ -708,7 +708,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * </ul>
 		 */
 		ST8_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
-				.unit(Unit.AMPERE) //
+				.unit(Unit.MILLIAMPERE) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**
@@ -764,7 +764,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * </ul>
 		 */
 		ST9_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
-				.unit(Unit.AMPERE) //
+				.unit(Unit.MILLIAMPERE) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**
@@ -820,7 +820,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * </ul>
 		 */
 		ST10_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
-				.unit(Unit.AMPERE) //
+				.unit(Unit.MILLIAMPERE) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**
@@ -876,7 +876,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * </ul>
 		 */
 		ST11_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
-				.unit(Unit.AMPERE) //
+				.unit(Unit.MILLIAMPERE) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**
@@ -932,7 +932,7 @@ public interface PvInverterSmaSunnyTripower extends SunSpecPvInverter, ManagedSy
 		 * </ul>
 		 */
 		ST12_DC_CURRENT(Doc.of(OpenemsType.INTEGER) //
-				.unit(Unit.AMPERE) //
+				.unit(Unit.MILLIAMPERE) //
 				.persistencePriority(PersistencePriority.HIGH)),
 
 		/**

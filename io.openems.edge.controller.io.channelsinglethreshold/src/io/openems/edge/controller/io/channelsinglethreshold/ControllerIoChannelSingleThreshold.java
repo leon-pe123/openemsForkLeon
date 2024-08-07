@@ -27,7 +27,8 @@ public interface ControllerIoChannelSingleThreshold extends Controller, OpenemsC
 				.unit(CUMULATED_SECONDS) //
 				.persistencePriority(HIGH)), //
 		
-		REGULATION_ACTIVE(Doc.of(BOOLEAN))
+		REGULATION_ACTIVE(Doc.of(BOOLEAN)
+		.persistencePriority(HIGH)) //
 		; //
 
 		private final Doc doc;
