@@ -1,5 +1,7 @@
 package io.openems.edge.pvinverter.fronius;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.ComponentContext;
@@ -44,6 +46,9 @@ import io.openems.edge.bridge.modbus.api.ModbusProtocol;
 import io.openems.edge.bridge.modbus.api.element.DummyRegisterElement;
 import io.openems.edge.bridge.modbus.api.element.UnsignedDoublewordElement;
 import io.openems.edge.bridge.modbus.api.element.UnsignedWordElement;
+import io.openems.edge.timedata.api.Timedata;
+import io.openems.edge.timedata.api.TimedataProvider;
+import io.openems.edge.timedata.api.utils.CalculateEnergyFromPower;
 
 @Designate(ocd = Config.class, factory = true)
 @Component(//
@@ -58,8 +63,9 @@ import io.openems.edge.bridge.modbus.api.element.UnsignedWordElement;
 		EdgeEventConstants.TOPIC_CYCLE_EXECUTE_WRITE //
 })
 
-public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements PvInverterFronius, SunSpecPvInverter,
-		ManagedSymmetricPvInverter, ElectricityMeter, ModbusComponent, OpenemsComponent, EventHandler, ModbusSlave {
+public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter
+		implements PvInverterFronius, SunSpecPvInverter, ManagedSymmetricPvInverter, ElectricityMeter, ModbusComponent,
+		OpenemsComponent, EventHandler, ModbusSlave, TimedataProvider {
 
 	private static final Map<SunSpecModel, Priority> ACTIVE_MODELS = ImmutableMap.<SunSpecModel, Priority>builder()
 			.put(DefaultSunSpecModel.S_1, Priority.LOW) // from 40002
@@ -77,6 +83,11 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 
 	@Reference
 	private ConfigurationAdmin cm;
+
+	@Reference(policy = ReferencePolicy.STATIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.MANDATORY)
+	private volatile Timedata timedata = null;
+
+	private List<CalculateEnergyFromPower> energyCalculators = new ArrayList<>();
 
 	private Config config;
 
@@ -215,6 +226,16 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 				try {
 					this.addStaticModbusTasks(this.getModbusProtocol(), this.numberOfModules);
 					this.staticTasksAdded = true;
+					// Add energy calculation channels
+					// Initialize energy calculators
+					for (int i = 0; i < this.numberOfModules; i++) { // Limit to 12 modules
+						String energyChannelName = "ST" + (i + 1) + "_DC_ENERGY";
+						IntegerReadChannel energyChannelId = this.getChannelByName(energyChannelName);
+						CalculateEnergyFromPower calculateEnergy = new CalculateEnergyFromPower(this,
+								energyChannelId.channelId());
+						this.energyCalculators.add(calculateEnergy);
+					}
+
 					return;
 				} catch (OpenemsException e) {
 					this.log.error("Error adding static Modbus tasks", e);
@@ -256,10 +277,26 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 				String powerChannelName = "ST" + (i + 1) + "_DC_POWER";
 				String energyChannelName = "ST" + (i + 1) + "_DC_ENERGY";
 
-				this.updateChannelValues(currentChannelInternal, currentChannelName, currentScaleFactor);
+				// final value is stored in mA
+				this.updateChannelValues(currentChannelInternal, currentChannelName, (currentScaleFactor + 3));
 				this.updateChannelValues(voltageChannelInternal, voltageChannelName, voltageScaleFactor);
 				this.updateChannelValues(powerChannelInternal, powerChannelName, powerScaleFactor);
-				this.updateChannelValues(energyChannelInternal, energyChannelName, energyScaleFactor);
+				/**
+				 * if the energy channel has no value (i.e. STP60-110) we calculate it
+				 */
+				if (energyChannelInternal.value().getOrError().intValue() == 0) {
+					Integer dcPower = this.getChannelByName(powerChannelName).value().getOrError();
+					if (dcPower == null) {
+						// Not available
+						this.energyCalculators.get(i).update(null);
+					} else if (dcPower > 0) {
+						this.energyCalculators.get(i).update(dcPower);
+					} else { // UNDEFINED??
+						this.energyCalculators.get(i).update(null);
+					}
+				} else {
+					this.updateChannelValues(energyChannelInternal, energyChannelName, energyScaleFactor);
+				}
 
 			}
 
@@ -322,6 +359,11 @@ public class PvInverterFroniusImpl extends AbstractSunSpecPvInverter implements 
 	@Deactivate
 	protected void deactivate() {
 		super.deactivate();
+	}
+
+	@Override
+	public Timedata getTimedata() {
+		return this.timedata;
 	}
 
 	@Override
