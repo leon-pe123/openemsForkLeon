@@ -76,7 +76,8 @@ public class ChannelFilter {
 		// Valid Component-ID
 		final var componentId = c[0];
 		if (!COMPONENT_ID_PATTERN.test(componentId)) {
-			return false;
+			//return false;
+			// do nothing
 		}
 
 		return true;
