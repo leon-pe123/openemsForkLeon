@@ -72,7 +72,7 @@ public class EvcsClusterPeakShavingImpl extends AbstractOpenemsComponent
 	 *
 	 * @return Minimum guaranteed power in Watt
 	 */
-	private static final int MINIMUM_CHARGE_POWER_GUARANTEE = 4500;
+	private static final int MINIMUM_CHARGE_POWER_GUARANTEE = 4666;
 
 	private final Logger log = LoggerFactory.getLogger(EvcsClusterPeakShavingImpl.class);
 
