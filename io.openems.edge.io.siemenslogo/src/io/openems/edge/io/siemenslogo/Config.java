@@ -23,7 +23,7 @@ import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 	@AttributeDefinition(name = "Modbus write address offset", description = "Address offset in Logo! for writing outputs / relays. This is where the virtual addresses start, e.g. 808 for virtual address 101.0 in Logo!")
 	int modbusOffsetWriteAddress() default 800;
 	
-	@AttributeDefinition(name = "Modbus read address offset", description = "Address offset in Logo! for reading inputs (DI1-4). This is where the virtual addresses start, e.g. 808 for virtual address 110.0 in Logo!")
+	@AttributeDefinition(name = "Modbus read address offset", description = "Address offset in Logo! for reading inputs (DI1-4). This is where the virtual addresses start, e.g. 880 for virtual address 110.0 in Logo!")
 	int modbusOffsetReadAddress() default 880;	
 	
 	@AttributeDefinition(name = "Modbus Unit-ID", description = "The Unit-ID of the Modbus device.")

@@ -32,7 +32,7 @@ import io.openems.edge.io.api.DigitalOutput;
 
 @Designate(ocd = Config.class, factory = true)
 @Component(//
-		name = "SiemensLogo.IO", //
+		name = "IO.SiemensLogo", //
 		immediate = true, //
 		configurationPolicy = ConfigurationPolicy.REQUIRE //
 )

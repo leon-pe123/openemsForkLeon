@@ -1,7 +1,7 @@
 = io.openems.edge.controller.pvinverter.reversepowerrelay
 
 Limits pv production according to current state of reverse power relay (short: rpr, german: "Rundsteuerempfaenger").
-Usually rpr as four defined states which are defined by it�s relays:
+Usually rpr as four defined states which are defined by it's relays:
 - K1 -> 0% limit pv production to 0
 - K2 -> 30% limit pv production to 30%
 - K3 -> 60% limit pv production to 60%
