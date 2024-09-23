@@ -179,7 +179,7 @@ public abstract class AbstractSunSpecPvInverter extends AbstractOpenemsSunSpecCo
 			if (this.readOnly) {
 				return;
 			}
-			this.logInfo(this.log, "Setze Limit. " + activePowerLimitOpt);
+			//this.logInfo(this.log, "Setze Limit. " + activePowerLimitOpt);
 			
 			
 			try {
