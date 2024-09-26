@@ -129,7 +129,7 @@ public class ReversePowerRelayImpl extends AbstractOpenemsComponent
 			BooleanReadChannel channel = this.componentManager.getChannel(address);
 			return channel.value().asOptional();
 		} catch (OpenemsNamedException e) {
-			this.log.error("Error reading channel value", e);
+			this.log.error("Error reading channel value for address: " + address, e);
 			return Optional.empty();
 		}
 	}
@@ -172,6 +172,7 @@ public class ReversePowerRelayImpl extends AbstractOpenemsComponent
 
 		} catch (Exception e) {
 			this.log.error("No values from modbus channels yet", e);
+			this.setPvLimit(0);			
 			return;
 		}
 
